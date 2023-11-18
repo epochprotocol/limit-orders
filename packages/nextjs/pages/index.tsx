@@ -1,9 +1,51 @@
+import { useEffect } from "react";
 import Link from "next/link";
+import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import type { NextPage } from "next";
+import { useWalletClient } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MetaHeader } from "~~/components/MetaHeader";
+import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 const Home: NextPage = () => {
+  const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+  const { data: walletClient } = useWalletClient();
+
+  const provider = useEthersProvider();
+  console.log("provider: ", provider);
+  const signer = useEthersSigner();
+  console.log("signer: ", signer);
+
+  const bundlerUrl = "http://0.0.0.0:14337/rpc";
+
+  useEffect(() => {
+    (async () => {
+      if (signer && provider) {
+        //use this account as wallet-owner (which will be used to sign the requests)
+        const chainId = await walletClient?.getChainId();
+        if (!chainId) {
+          return;
+        }
+        const bundlerProvider = new HttpRpcClient(bundlerUrl, ENTRY_POINT, chainId);
+        const walletAPI = new SimpleAccountAPI({
+          provider,
+          entryPointAddress: ENTRY_POINT,
+          owner: signer,
+          factoryAddress: "0x9406cc6185a346906296840746125a0e44976454",
+        });
+        const op = await walletAPI.createSignedUserOp({
+          target: "0xe1afC1092c40d32F72Ad065C93f6D27843458B95",
+          data: "0x",
+        });
+        console.log("op: ", op);
+
+        const userOpHash = await bundlerProvider.sendUserOpToBundler(op);
+        const txid = await walletAPI.getUserOpReceipt(userOpHash);
+        console.log("reqId", userOpHash, "txid=", txid);
+      }
+    })();
+  }, [provider, signer, walletClient]);
+
   return (
     <>
       <MetaHeader />
