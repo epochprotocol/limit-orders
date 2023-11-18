@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import type { NextPage } from "next";
 import { useWalletClient } from "wagmi";
 import { MetaHeader } from "~~/components/MetaHeader";
@@ -17,47 +15,47 @@ const Home: NextPage = () => {
 
   const bundlerUrl = "http://0.0.0.0:14337/rpc";
 
-  useEffect(() => {
-    (async () => {
-      if (signer && provider) {
-        //use this account as wallet-owner (which will be used to sign the requests)
-        const chainId = await walletClient?.getChainId();
-        if (!chainId) {
-          return;
-        }
-        const bundlerProvider = new HttpRpcClient(bundlerUrl, ENTRY_POINT, chainId);
-        const walletAPI = new SimpleAccountAPI({
-          provider,
-          entryPointAddress: ENTRY_POINT,
-          owner: signer,
-          factoryAddress: "0x9406cc6185a346906296840746125a0e44976454",
-        });
-        const op = await walletAPI.createSignedUserOp({
-          target: "0xe1afC1092c40d32F72Ad065C93f6D27843458B95",
-          data: "0x",
-        });
-        console.log("op: ", op);
+  // useEffect(() => {
+  //   (async () => {
+  //     if (signer && provider) {
+  //       //use this account as wallet-owner (which will be used to sign the requests)
+  //       const chainId = await walletClient?.getChainId();
+  //       if (!chainId) {
+  //         return;
+  //       }
+  //       const bundlerProvider = new HttpRpcClient(bundlerUrl, ENTRY_POINT, chainId);
+  //       const walletAPI = new SimpleAccountAPI({
+  //         provider,
+  //         entryPointAddress: ENTRY_POINT,
+  //         owner: signer,
+  //         factoryAddress: "0x9406cc6185a346906296840746125a0e44976454",
+  //       });
+  //       const op = await walletAPI.createSignedUserOp({
+  //         target: "0xe1afC1092c40d32F72Ad065C93f6D27843458B95",
+  //         data: "0x",
+  //       });
+  //       console.log("op: ", op);
 
-        const userOpHash = await bundlerProvider.sendUserOpToBundler(op);
-        const txid = await walletAPI.getUserOpReceipt(userOpHash);
-        console.log("reqId", userOpHash, "txid=", txid);
-      }
-    })();
-  }, [provider, signer, walletClient]);
+  //       const userOpHash = await bundlerProvider.sendUserOpToBundler(op);
+  //       const txid = await walletAPI.getUserOpReceipt(userOpHash);
+  //       console.log("reqId", userOpHash, "txid=", txid);
+  //     }
+  //   })();
+  // }, [provider, signer, walletClient]);
 
   return (
     <>
       <MetaHeader />
-      <div className="App">
-        {/* <Header
+
+      {/* <Header
 				connect={connect}
 				isConnected={isConnected}
 				address={address}
 			/> */}
-        <div className="mainWindow">
-          <Swap />
-        </div>
+      <div className="mt-10 flex justify-center">
+        <Swap />
       </div>
+
       {/* <div className="flex items-center flex-col flex-grow pt-10">
         <div className="px-5">
           <h1 className="text-center mb-8">

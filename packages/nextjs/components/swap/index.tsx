@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import tokenList from "../../components/assets/tokenList.json";
 import UniswapV2Router02ABI from "../../contracts/UniswapV2Router02ABI";
-import { ArrowDownOutlined, DownOutlined, SettingOutlined } from "@ant-design/icons";
-import { Button, Input, Modal, Popover, Radio, message } from "antd";
+import { DownOutlined, SettingOutlined } from "@ant-design/icons";
+import { Modal, Popover, Radio, message } from "antd";
 import { formatEther, parseEther } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
+import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 
 function Swap() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -23,6 +24,7 @@ function Swap() {
   });
   const publicClient = usePublicClient();
   const { address } = useAccount();
+  const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
 
   // const { data, sendTransaction } = useSendTransaction({
   // 	request: {
@@ -205,53 +207,79 @@ function Swap() {
           })}
         </div>
       </Modal>
-      <div className="tradeBox">
-        <div className="tradeBoxHeader">
-          <h4>Swap</h4>
+
+      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
+        <div className="flex items-center justify-between py-3 px-1">
+          <div>Swap</div>
           <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
-            <SettingOutlined className="cog" rev={undefined} />
+            <SettingOutlined className="h-6" />
           </Popover>
         </div>
-        <div className="inputs">
-          <Input
-            placeholder="0"
-            value={tokenOneAmount?.toString()}
-            onChange={e => {
-              setTokenOneAmount(Number(e.target.value));
-            }}
-            // disabled={!prices}
-          />
-          <Input
-            placeholder="0"
-            value={tokenTwoAmount?.toString()}
-            onChange={e => setTokenTwoAmount(Number(e.target.value))}
-          />
-          <div>Current Exchange: {prices}</div>
+        <div className="relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600">
+          <div className="flex items-center rounded-xl">
+            <input
+              placeholder="0"
+              className="w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent"
+              value={tokenOneAmount?.toString()}
+              onChange={e => {
+                setTokenOneAmount(Number(e.target.value));
+              }}
+              // disabled={!prices}
+            />
 
-          <div className="switchButton" onClick={switchTokens}>
-            <ArrowDownOutlined className="switchArrow" rev={undefined} />
+            <div className="assetOne" onClick={() => openModal(1)}>
+              <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
+              {tokenOne.ticker}
+              <DownOutlined rev={undefined} />
+            </div>
           </div>
-          <div className="assetOne" onClick={() => openModal(1)}>
-            <img src={tokenOne.img} alt="assetOneLogo" className="assetLogo" />
-            {tokenOne.ticker}
-            <DownOutlined rev={undefined} />
-          </div>
-          <div className="assetTwo" onClick={() => openModal(2)}>
-            <img src={tokenTwo.img} alt="assetOneLogo" className="assetLogo" />
-            {tokenTwo.ticker}
-            <DownOutlined rev={undefined} />
+
+          <ArrowSmallDownIcon
+            className="absolute left-1/2 -translate-x-1/2 -bottom-6 z-10 h-10 p-1 bg-[#212429] border-4 border-zinc-900 text-zinc-300 rounded-xl cursor-pointer hover:scale-110"
+            onClick={switchTokens}
+          />
+        </div>
+
+        <div className="relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600">
+          <div className="flex items-center rounded-xl">
+            <input
+              placeholder="0"
+              className="w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent"
+              value={tokenTwoAmount?.toString()}
+              onChange={e => {
+                setTokenTwoAmount(Number(e.target.value));
+              }}
+              // disabled={!prices}
+            />
+
+            <div className="assetOne" onClick={() => openModal(2)}>
+              <img src={tokenTwo.img} alt="assetTwoLogo" className="h-5 ml-2" />
+              {tokenTwo.ticker}
+              <DownOutlined rev={undefined} />
+            </div>
           </div>
         </div>
-        <Button
-          className="swapButton"
-          disabled={!tokenOneAmount || !address}
-          //onClick={fetchDexSwap}
+        <div className="text-gray-400 text-xs">Current Exchange: {prices.toFixed(5)}</div>
+
+        <button
+          className={getSwapBtnClassName()}
+          onClick={() => {
+            //fetchDexSwap()
+          }}
         >
-          Swap
-        </Button>
+          {address == null ? "Connect Wallet" : "Swap"}
+        </button>
       </div>
     </>
   );
+
+  function getSwapBtnClassName() {
+    let className = "p-4 w-full my-2 rounded-xl";
+    className +=
+      address == null || tokenOneAmount === 0 ? " text-zinc-400 bg-zinc-800 pointer-events-none" : " bg-blue-700";
+    className += needToIncreaseAllowance ? " bg-yellow-600" : "";
+    return className;
+  }
 }
 
 export default Swap;
