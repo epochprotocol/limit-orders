@@ -41,7 +41,7 @@ const Home: NextPage = () => {
         console.log("reqId", userOpHash, "txid=", txid);
       }
     })();
-  }, [provider, signer, walletClient]);
+  }, [provider, signer, walletClient, bundlerUrl]);
 
   return (
     <>
