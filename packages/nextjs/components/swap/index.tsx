@@ -8,6 +8,15 @@ import { useAccount, usePublicClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 
 function Swap() {
+  const styles = {
+    assetStyle:
+      "absolute h-8 bg-[#3a4157] flex justify-start items-center font-bold text-base pr-2 top-[25px] right-[20px] rounded-full gap-[5px] hover:cursor-pointer",
+    modalContent: "mt-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
+    inputTile: "relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600",
+    inputField: "w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent",
+    inputFlex: "flex items-center rounded-xl",
+  };
+
   const [messageApi, contextHolder] = message.useMessage();
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState<number>(0);
@@ -193,14 +202,18 @@ function Swap() {
     <>
       {contextHolder}
       <Modal open={isOpen} footer={null} onCancel={() => setIsOpen(false)} title="Select a token">
-        <div className="modalContent">
+        <div className={styles.modalContent}>
           {tokenList?.map((e, i) => {
             return (
-              <div className="tokenChoice" key={i} onClick={() => modifyToken(i)}>
-                <img src={e.img} alt={e.ticker} className="tokenLogo" />
+              <div
+                className="flex justify-start items-center pl-5 pt-2 pb-2 hover:cursor-pointer hover:bg-gray-800"
+                key={i}
+                onClick={() => modifyToken(i)}
+              >
+                <img src={e.img} alt={e.ticker} className="h-10 w-10" />
                 <div className="tokenChoiceNames">
-                  <div className="tokenName">{e.name}</div>
-                  <div className="tokenTicker">{e.ticker}</div>
+                  <div className="ml-2 text-base font-medium">{e.name}</div>
+                  <div className="ml-2 text-xs font-light text-gray-500">{e.ticker}</div>
                 </div>
               </div>
             );
@@ -215,11 +228,11 @@ function Swap() {
             <SettingOutlined className="h-6" />
           </Popover>
         </div>
-        <div className="relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600">
-          <div className="flex items-center rounded-xl">
+        <div className={styles.inputTile}>
+          <div className={styles.inputFlex}>
             <input
               placeholder="0"
-              className="w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent"
+              className={styles.inputField}
               value={tokenOneAmount?.toString()}
               onChange={e => {
                 setTokenOneAmount(Number(e.target.value));
@@ -227,7 +240,7 @@ function Swap() {
               // disabled={!prices}
             />
 
-            <div className="assetOne" onClick={() => openModal(1)}>
+            <div className={styles.assetStyle} onClick={() => openModal(1)}>
               <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
               {tokenOne.ticker}
               <DownOutlined rev={undefined} />
@@ -240,11 +253,11 @@ function Swap() {
           />
         </div>
 
-        <div className="relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600">
-          <div className="flex items-center rounded-xl">
+        <div className={styles.inputTile}>
+          <div className={styles.inputFlex}>
             <input
               placeholder="0"
-              className="w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent"
+              className={styles.inputField}
               value={tokenTwoAmount?.toString()}
               onChange={e => {
                 setTokenTwoAmount(Number(e.target.value));
@@ -252,7 +265,7 @@ function Swap() {
               // disabled={!prices}
             />
 
-            <div className="assetOne" onClick={() => openModal(2)}>
+            <div className={styles.assetStyle} onClick={() => openModal(2)}>
               <img src={tokenTwo.img} alt="assetTwoLogo" className="h-5 ml-2" />
               {tokenTwo.ticker}
               <DownOutlined rev={undefined} />
