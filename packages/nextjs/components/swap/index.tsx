@@ -22,7 +22,7 @@ function Swap() {
     value: null,
   });
   const publicClient = usePublicClient();
-  const { address, isConnecting, isDisconnected } = useAccount();
+  const { address } = useAccount();
 
   // const { data, sendTransaction } = useSendTransaction({
   // 	request: {

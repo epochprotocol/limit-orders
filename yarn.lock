@@ -12,6 +12,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@account-abstraction/contracts@npm:^0.6.0":
+  version: 0.6.0
+  resolution: "@account-abstraction/contracts@npm:0.6.0"
+  checksum: 745e838e2cb04c89a9c0df11d022c1d604b1e440c9cd65c2014edd9b1056809fec2e363b42ec09883d49dbe09f9597d8339c90d57763a1621fb515edf5fef35d
+  languageName: node
+  linkType: hard
+
+"@account-abstraction/utils@npm:^0.6.0":
+  version: 0.6.0
+  resolution: "@account-abstraction/utils@npm:0.6.0"
+  dependencies:
+    "@account-abstraction/contracts": ^0.6.0
+    "@ethersproject/abi": ^5.7.0
+    "@ethersproject/providers": ^5.7.0
+    "@openzeppelin/contracts": ^4.7.3
+    debug: ^4.3.4
+    ethers: ^5.7.0
+  checksum: bea3e5b1bf54727b527bcb985e1ca9ba0cf50670c364c1102996b17be4d7a9041572570ddebc45c5752caca1889964ec4b2692ea016c3633d067fad7cbc4bb33
+  languageName: node
+  linkType: hard
+
 "@adraffy/ens-normalize@npm:1.10.0":
   version: 1.10.0
   resolution: "@adraffy/ens-normalize@npm:1.10.0"
@@ -1658,6 +1679,39 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@epoch-protocol/sdk@npm:latest":
+  version: 0.8.3
+  resolution: "@epoch-protocol/sdk@npm:0.8.3"
+  dependencies:
+    "@account-abstraction/contracts": ^0.6.0
+    "@account-abstraction/utils": ^0.6.0
+    "@epoch-protocol/utils": ^0.6.2
+    "@ethersproject/abstract-provider": ^5.7.0
+    "@ethersproject/abstract-signer": ^5.7.0
+    "@ethersproject/networks": ^5.7.0
+    "@ethersproject/properties": ^5.7.0
+    "@ethersproject/providers": ^5.7.0
+    "@types/debug": ^4.1.7
+    debug: ^4.3.4
+    ethers: ^5.7.0
+  checksum: 19e49412ad60fbb8ce592d68409a7bd3934eacabc51e815782be613e2ffdcb5ecf53b0fb55d5f7897370ec369d428ab5431894e5c038e98993bdddfd745e6076
+  languageName: node
+  linkType: hard
+
+"@epoch-protocol/utils@npm:^0.6.2":
+  version: 0.6.2
+  resolution: "@epoch-protocol/utils@npm:0.6.2"
+  dependencies:
+    "@account-abstraction/contracts": ^0.6.0
+    "@ethersproject/abi": ^5.7.0
+    "@ethersproject/providers": ^5.7.0
+    "@openzeppelin/contracts": ^4.7.3
+    debug: ^4.3.4
+    ethers: ^5.7.0
+  checksum: af4fc813549ddca5c3488d86cb61f7f5c995dbaae2a070a4a9f23b17f3881a3f1c516259b6490dd19b56a9ccc050c897693d725c1e098bb211dffb6a61f0e67a
+  languageName: node
+  linkType: hard
+
 "@esbuild-plugins/node-modules-polyfill@npm:^0.1.4":
   version: 0.1.4
   resolution: "@esbuild-plugins/node-modules-polyfill@npm:0.1.4"
@@ -2421,7 +2475,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/providers@npm:5.7.2, @ethersproject/providers@npm:^5.7.1, @ethersproject/providers@npm:^5.7.2":
+"@ethersproject/providers@npm:5.7.2, @ethersproject/providers@npm:^5.7.0, @ethersproject/providers@npm:^5.7.1, @ethersproject/providers@npm:^5.7.2":
   version: 5.7.2
   resolution: "@ethersproject/providers@npm:5.7.2"
   dependencies:
@@ -3470,7 +3524,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:^4.8.1":
+"@openzeppelin/contracts@npm:^4.7.3, @openzeppelin/contracts@npm:^4.8.1":
   version: 4.9.3
   resolution: "@openzeppelin/contracts@npm:4.9.3"
   checksum: 4932063e733b35fa7669b9fe2053f69b062366c5c208b0c6cfa1ac451712100c78acff98120c3a4b88d94154c802be05d160d71f37e7d74cadbe150964458838
@@ -16855,8 +16909,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "se-2@workspace:."
   dependencies:
+    "@epoch-protocol/sdk": latest
+    ethers: ^5.7.0
     husky: ^8.0.1
     lint-staged: ^13.0.3
+    viem: ^1.19.3
   languageName: unknown
   linkType: soft
 
@@ -19034,7 +19091,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"viem@npm:^1.0.0, viem@npm:^1.16.6":
+"viem@npm:^1.0.0, viem@npm:^1.16.6, viem@npm:^1.19.3":
   version: 1.19.3
   resolution: "viem@npm:1.19.3"
   dependencies:
