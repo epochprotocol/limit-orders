@@ -13,22 +13,19 @@ const Home: NextPage = () => {
   const signer = useEthersSigner();
   console.log("signer: ", signer);
 
-  const bundlerUrl = "http://0.0.0.0:14337/rpc";
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://localhost:3000";
 
   // useEffect(() => {
   //   (async () => {
   //     if (signer && provider) {
-  //       //use this account as wallet-owner (which will be used to sign the requests)
-  //       const chainId = await walletClient?.getChainId();
-  //       if (!chainId) {
-  //         return;
-  //       }
-  //       const bundlerProvider = new HttpRpcClient(bundlerUrl, ENTRY_POINT, chainId);
+  //       const network = await provider.getNetwork();
+  //       const bundler = new HttpRpcClient(bundlerUrl, ENTRY_POINT, parseInt(network.chainId.toString()));
+
   //       const walletAPI = new SimpleAccountAPI({
   //         provider,
   //         entryPointAddress: ENTRY_POINT,
   //         owner: signer,
-  //         factoryAddress: "0x9406cc6185a346906296840746125a0e44976454",
+  //         factoryAddress: "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1",
   //       });
   //       const op = await walletAPI.createSignedUserOp({
   //         target: "0xe1afC1092c40d32F72Ad065C93f6D27843458B95",
@@ -36,12 +33,12 @@ const Home: NextPage = () => {
   //       });
   //       console.log("op: ", op);
 
-  //       const userOpHash = await bundlerProvider.sendUserOpToBundler(op);
+  //       const userOpHash = await bundler.sendUserOpToBundler(op);
   //       const txid = await walletAPI.getUserOpReceipt(userOpHash);
   //       console.log("reqId", userOpHash, "txid=", txid);
   //     }
   //   })();
-  // }, [provider, signer, walletClient]);
+  // }, [provider, signer, walletClient, bundlerUrl]);
 
   return (
     <>
