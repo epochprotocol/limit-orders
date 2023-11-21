@@ -5,16 +5,6 @@ import Swap from "~~/components/swap";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 const Home: NextPage = () => {
-  const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
-  const { data: walletClient } = useWalletClient();
-
-  const provider = useEthersProvider();
-  console.log("provider: ", provider);
-  const signer = useEthersSigner();
-  console.log("signer: ", signer);
-
-  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://localhost:3000";
-
   // useEffect(() => {
   //   (async () => {
   //     if (signer && provider) {

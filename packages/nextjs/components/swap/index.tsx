@@ -2,10 +2,16 @@ import React, { useEffect, useState } from "react";
 import tokenList from "../../components/assets/tokenList.json";
 import UniswapV2Router02ABI from "../../contracts/UniswapV2Router02ABI";
 import { DownOutlined, SettingOutlined } from "@ant-design/icons";
+import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
+import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
 import { Modal, Popover, Radio, message } from "antd";
-import { formatEther, parseEther } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
+import { BigNumber } from "ethers";
+import { encodeFunctionData, formatEther, parseAbi, parseEther } from "viem";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
+import externalContracts from "~~/contracts/externalContracts";
+import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 function Swap() {
   const styles = {
@@ -17,10 +23,14 @@ function Swap() {
     inputFlex: "flex items-center rounded-xl",
   };
 
+  const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+  const FACTORY_ADDRESS = "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1";
+
   const [messageApi, contextHolder] = message.useMessage();
   const [slippage, setSlippage] = useState(2.5);
-  const [tokenOneAmount, setTokenOneAmount] = useState<number>(0);
-  const [tokenTwoAmount, setTokenTwoAmount] = useState<number>(0);
+  const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
+  const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
+  const [tokenTwoLimitPrice, setTokenTwoLimitPrice] = useState<string>("");
   const [tokenOne, setTokenOne] = useState(tokenList[0]);
   const [tokenTwo, setTokenTwo] = useState(tokenList[1]);
   const [isOpen, setIsOpen] = useState(false);
@@ -34,6 +44,30 @@ function Swap() {
   const publicClient = usePublicClient();
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
+
+  const provider = useEthersProvider();
+  console.log("provider: ", provider);
+  const signer = useEthersSigner();
+  console.log("signer: ", signer);
+
+  const { data: walletClient } = useWalletClient();
+
+  const { data: uniswapRouter02 } = useScaffoldContract({
+    contractName: "UNISWAP_ROUTER02",
+    walletClient,
+  });
+
+  const { data: token1 } = useScaffoldContract({
+    contractName: "TOKEN1",
+    walletClient,
+  });
+
+  const { data: token2 } = useScaffoldContract({
+    contractName: "TOKEN2",
+    walletClient,
+  });
+
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://0.0.0.0:14337/80001";
 
   // const { data, sendTransaction } = useSendTransaction({
   // 	request: {
@@ -64,12 +98,14 @@ function Swap() {
 
   function switchTokens() {
     setPrices(0);
-    setTokenOneAmount(0);
-    setTokenTwoAmount(0);
+    setTokenOneAmount("0");
+    setTokenTwoAmount("0");
     const one = tokenOne;
     const two = tokenTwo;
     setTokenOne(two);
     setTokenTwo(one);
+
+    fetchPrices(two.address, one.address);
   }
 
   function openModal(asset: React.SetStateAction<number>) {
@@ -79,8 +115,8 @@ function Swap() {
 
   function modifyToken(i: number) {
     setPrices(0);
-    setTokenOneAmount(0);
-    setTokenTwoAmount(0);
+    setTokenOneAmount("0");
+    setTokenTwoAmount("0");
     if (changeToken === 1) {
       setTokenOne(tokenList[i]);
     } else {
@@ -92,26 +128,114 @@ function Swap() {
   async function fetchPrices(one: string, two: string) {
     console.log("We are here");
     console.log(parseEther(tokenOneAmount.toString()));
+    console.log("publicClient: ", publicClient);
 
-    const data = await publicClient
-      .readContract({
-        address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-        functionName: "quote",
-        abi: UniswapV2Router02ABI,
-        args: [parseEther(tokenOneAmount.toString()).toString(), one, two],
-      })
-      .then((data: any) => {
-        const price = Number(formatEther(BigInt(data as string)));
+    if (uniswapRouter02 && uniswapRouter02.address) {
+      const data = await uniswapRouter02.read.getAmountsOut([BigInt(parseEther("1").toString()), [one, two]]);
+
+      if (data) {
+        console.log("data: ", data);
+
+        const price = Number(formatEther(data[1]));
+        console.log("price: ", price);
         console.log("price have arrived", price);
         setPrices(price);
-      });
-    // const res = await axios.get(`http://localhost:3001/tokenPrice`, {
-    // 	params: { addressOne: one, addressTwo: two },
-    // });
+        setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
+        setTokenTwoLimitPrice(price.toString());
+      }
+
+      // const res = await axios.get(`http://localhost:3001/tokenPrice`, {
+      // 	params: { addressOne: one, addressTwo: two },
+      // });
+    }
   }
 
+  const executeSwap = async () => {
+    try {
+      if (signer && provider && address && token1 && token2 && uniswapRouter02) {
+        const network = await provider.getNetwork();
+
+        const walletAPI = new SimpleAccountAPI({
+          provider,
+          entryPointAddress: ENTRY_POINT,
+          owner: signer,
+          factoryAddress: FACTORY_ADDRESS,
+        });
+        const bundler = new HttpRpcClient(bundlerUrl, ENTRY_POINT, parseInt(network.chainId.toString()));
+
+        // const dataToken1Approve = encodeFunctionData({
+        //   abi: token1?.abi as unknown as any,
+        //   args: [uniswapRouter02?.address, BigInt(tokenOneAmount) * 10n ** 18n],
+        //   functionName: "approve",
+        // });
+
+        // const opToken1Approve = await walletAPI.createSignedUserOp({
+        //   target: token1?.address,
+        //   data: dataToken1Approve,
+        // });
+        // const userOpHashToken1 = await bundler.sendUserOpToBundler(opToken1Approve);
+        // console.log("userOpHashToken1: ", userOpHashToken1);
+
+        // const dataToken2Approve = encodeFunctionData({
+        //   abi: token2?.abi as unknown as any,
+        //   args: [uniswapRouter02?.address, BigInt(tokenOneAmount) * 10n ** 18n],
+        //   functionName: "approve",
+        // });
+
+        // const opToken2Approve = await walletAPI.createSignedUserOp({
+        //   target: token2?.address,
+        //   data: dataToken2Approve,
+        // });
+        // const userOpHashToken2 = await bundler.sendUserOpToBundler(opToken2Approve);
+        // console.log("userOpHashToken2: ", userOpHashToken2);
+
+        const data = encodeFunctionData({
+          abi: uniswapRouter02?.abi as unknown as any,
+          args: [
+            parseEther(tokenOneAmount.toString()),
+            parseEther(tokenTwoLimitPrice.toString()),
+            [tokenOne.address, tokenTwo.address],
+            address,
+            BigInt(new Date().valueOf() + 3600 * 24 * 120),
+          ],
+          functionName: "swapExactTokensForTokens",
+        });
+        console.log("data: ", data);
+
+        const op = await walletAPI.createSignedUserOp({
+          target: uniswapRouter02?.address,
+          data,
+          maxFeePerGas: BigNumber.from("1500000032"),
+          maxPriorityFeePerGas: BigNumber.from("1500000000"),
+          gasLimit: BigNumber.from("1500320"),
+        });
+        console.log("op: ", op);
+
+        const advancedOp: AdvancedUserOperationStruct = {
+          ...op,
+          advancedUserOperation: {
+            triggerEvent: {
+              contractAddress: uniswapRouter02?.address,
+              eventSignature:
+                "event Swap(address indexed sender,uint amount0In,uint amount1In,uint amount0Out,uint amount1Out,address indexed to);",
+              evaluationStatement: `:amount0In: / :amount1Out: >= ${tokenTwoLimitPrice}`,
+            },
+          },
+        };
+        console.log("advancedOp: ", advancedOp);
+        console.log("bundlerUrl: ", bundlerUrl);
+
+        const userOpHash = await bundler.sendUserOpToBundler(advancedOp);
+        const txid = await walletAPI.getUserOpReceipt(userOpHash);
+        console.log("reqId", userOpHash, "txid=", txid);
+      }
+    } catch (error) {
+      console.log("error: ", error);
+    }
+  };
+
   useEffect(() => {
-    if (tokenOneAmount > 0) fetchPrices(tokenOne.address, tokenTwo.address);
+    if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
   }, [tokenOne, tokenTwo, tokenOneAmount]);
 
   useEffect(() => {
@@ -235,7 +359,7 @@ function Swap() {
               className={styles.inputField}
               value={tokenOneAmount?.toString()}
               onChange={e => {
-                setTokenOneAmount(Number(e.target.value));
+                setTokenOneAmount(e.target.value);
               }}
               // disabled={!prices}
             />
@@ -258,10 +382,7 @@ function Swap() {
             <input
               placeholder="0"
               className={styles.inputField}
-              value={tokenTwoAmount?.toString()}
-              onChange={e => {
-                setTokenTwoAmount(Number(e.target.value));
-              }}
+              defaultValue={tokenTwoAmount}
               // disabled={!prices}
             />
 
@@ -273,6 +394,52 @@ function Swap() {
           </div>
         </div>
         <div className="text-gray-400 text-xs">Current Exchange: {prices.toFixed(5)}</div>
+
+        <div className={styles.inputTile}>
+          <div className={styles.inputFlex}>
+            <input
+              placeholder="0"
+              className={styles.inputField}
+              value={tokenTwoLimitPrice?.toString()}
+              onChange={e => {
+                setTokenTwoLimitPrice(e.target.value);
+              }}
+              // disabled={!prices}
+            />
+          </div>
+        </div>
+
+        <button className={getSwapBtnClassName()} onClick={executeSwap}>
+          {address == null ? "Connect Wallet" : "Swap"}
+        </button>
+      </div>
+
+      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl" style={{ color: "white", marginLeft: "2rem" }}>
+        <div className="flex items-center justify-between py-3 px-1">
+          <div>Your Orders</div>
+          <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
+            <SettingOutlined className="h-6" />
+          </Popover>
+        </div>
+        <div className={styles.inputTile}>
+          <div className={styles.inputFlex}>
+            <input
+              placeholder="0"
+              className={styles.inputField}
+              value={tokenOneAmount?.toString()}
+              onChange={e => {
+                setTokenOneAmount(e.target.value);
+              }}
+              // disabled={!prices}
+            />
+
+            <div className={styles.assetStyle} onClick={() => openModal(1)}>
+              <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
+              {tokenOne.ticker}
+              <DownOutlined rev={undefined} />
+            </div>
+          </div>
+        </div>
 
         <button
           className={getSwapBtnClassName()}
@@ -289,7 +456,7 @@ function Swap() {
   function getSwapBtnClassName() {
     let className = "p-4 w-full my-2 rounded-xl";
     className +=
-      address == null || tokenOneAmount === 0 ? " text-zinc-400 bg-zinc-800 pointer-events-none" : " bg-blue-700";
+      address == null || tokenOneAmount === "0" ? " text-zinc-400 bg-zinc-800 pointer-events-none" : " bg-blue-700";
     className += needToIncreaseAllowance ? " bg-yellow-600" : "";
     return className;
   }

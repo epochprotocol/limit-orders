@@ -1,5 +1,40 @@
 [
     {
+        "ticker": "TOK1",
+        "img": "https://cdn.moralis.io/eth/0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0.png",
+        "name": "Token1",
+        "address": "0x135C30ba05C8Ff1DDe4AE69Cb4Ee3631855F7e5e",
+        "decimals": 18
+    },
+    {
+        "ticker": "TOK2",
+        "img": "https://cdn.moralis.io/eth/0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0.png",
+        "name": "Token2",
+        "address": "0x4b1Ee0803EAf7351B4a7ae4D542e66fE4A04Fe7A",
+        "decimals": 18
+    },
+    {
+        "ticker": "MEME",
+        "img": "https://cdn.moralis.io/eth/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984.png",
+        "name": "MEME",
+        "address": "0x9fD8095c80A44B6a17A4ba1333fA4D0832bb8633",
+        "decimals": 18
+    },
+    {
+        "ticker": "UNI",
+        "img": "https://cdn.moralis.io/eth/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984.png",
+        "name": "Uniswap",
+        "address": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+        "decimals": 18
+    },
+    {
+        "ticker": "USDT",
+        "img": "https://cdn.moralis.io/eth/0xdac17f958d2ee523a2206206994597c13d831ec7.png",
+        "name": "Tether USD",
+        "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "decimals": 6
+    },
+    {
         "ticker": "USDC",
         "img": "https://cdn.moralis.io/eth/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png",
         "name": "USD Coin",
@@ -12,13 +47,6 @@
         "name": "Chainlink",
         "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
         "decimals": 18
-    },
-    {
-        "ticker": "USDT",
-        "img": "https://cdn.moralis.io/eth/0xdac17f958d2ee523a2206206994597c13d831ec7.png",
-        "name": "Tether USD",
-        "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        "decimals": 6
     },
     {
         "ticker": "GUSD",
@@ -49,20 +77,6 @@
         "decimals": 8
     },
     {
-        "ticker": "MATIC",
-        "img": "https://cdn.moralis.io/eth/0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0.png",
-        "name": "Matic Token",
-        "address": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0",
-        "decimals": 18
-    },
-    {
-        "ticker": "UNI",
-        "img": "https://cdn.moralis.io/eth/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984.png",
-        "name": "Uniswap",
-        "address": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
-        "decimals": 18
-    },
-    {
         "ticker": "CRV",
         "img": "https://cdn.moralis.io/eth/0xd533a949740bb3306d119cc777fa900ba034cd52.png",
         "name": "Curve DAO Token",
@@ -90,6 +104,4 @@
         "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
         "decimals": 18
     }
-
-
 ]
