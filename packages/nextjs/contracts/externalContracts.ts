@@ -355,6 +355,106 @@ const externalContracts = {
         { stateMutability: "payable", type: "receive" },
       ],
     },
+    UNISWAP_FACTORY: {
+      address: "0xB601CFD4c064c56636D86C2751B7a5Cb15F2B089",
+      abi: [
+        {
+          inputs: [{ internalType: "address", name: "_feeToSetter", type: "address" }],
+          payable: false,
+          stateMutability: "nonpayable",
+          type: "constructor",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            { indexed: true, internalType: "address", name: "token0", type: "address" },
+            { indexed: true, internalType: "address", name: "token1", type: "address" },
+            { indexed: false, internalType: "address", name: "pair", type: "address" },
+            { indexed: false, internalType: "uint256", name: "", type: "uint256" },
+          ],
+          name: "PairCreated",
+          type: "event",
+        },
+        {
+          constant: true,
+          inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          name: "allPairs",
+          outputs: [{ internalType: "address", name: "", type: "address" }],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          constant: true,
+          inputs: [],
+          name: "allPairsLength",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          constant: false,
+          inputs: [
+            { internalType: "address", name: "tokenA", type: "address" },
+            { internalType: "address", name: "tokenB", type: "address" },
+          ],
+          name: "createPair",
+          outputs: [{ internalType: "address", name: "pair", type: "address" }],
+          payable: false,
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          constant: true,
+          inputs: [],
+          name: "feeTo",
+          outputs: [{ internalType: "address", name: "", type: "address" }],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          constant: true,
+          inputs: [],
+          name: "feeToSetter",
+          outputs: [{ internalType: "address", name: "", type: "address" }],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          constant: true,
+          inputs: [
+            { internalType: "address", name: "", type: "address" },
+            { internalType: "address", name: "", type: "address" },
+          ],
+          name: "getPair",
+          outputs: [{ internalType: "address", name: "", type: "address" }],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          constant: false,
+          inputs: [{ internalType: "address", name: "_feeTo", type: "address" }],
+          name: "setFeeTo",
+          outputs: [],
+          payable: false,
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          constant: false,
+          inputs: [{ internalType: "address", name: "_feeToSetter", type: "address" }],
+          name: "setFeeToSetter",
+          outputs: [],
+          payable: false,
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+      ],
+    },
     TOKEN1: {
       address: "0x135C30ba05C8Ff1DDe4AE69Cb4Ee3631855F7e5e",
       abi: [
@@ -682,6 +782,533 @@ const externalContracts = {
           ],
           name: "Approval",
           type: "event",
+        },
+      ],
+    },
+    SIMPLE_ACCOUNT: {
+      address: "0x037241c85415fcc94d830d972bbec26e079165aa",
+      abi: [
+        {
+          inputs: [
+            {
+              internalType: "contract IEntryPoint",
+              name: "anEntryPoint",
+              type: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "constructor",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "address",
+              name: "previousAdmin",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "address",
+              name: "newAdmin",
+              type: "address",
+            },
+          ],
+          name: "AdminChanged",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "beacon",
+              type: "address",
+            },
+          ],
+          name: "BeaconUpgraded",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint8",
+              name: "version",
+              type: "uint8",
+            },
+          ],
+          name: "Initialized",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "contract IEntryPoint",
+              name: "entryPoint",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "owner",
+              type: "address",
+            },
+          ],
+          name: "SimpleAccountInitialized",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "implementation",
+              type: "address",
+            },
+          ],
+          name: "Upgraded",
+          type: "event",
+        },
+        {
+          inputs: [],
+          name: "addDeposit",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "entryPoint",
+          outputs: [
+            {
+              internalType: "contract IEntryPoint",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "dest",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "value",
+              type: "uint256",
+            },
+            {
+              internalType: "bytes",
+              name: "func",
+              type: "bytes",
+            },
+          ],
+          name: "execute",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address[]",
+              name: "dest",
+              type: "address[]",
+            },
+            {
+              internalType: "bytes[]",
+              name: "func",
+              type: "bytes[]",
+            },
+          ],
+          name: "executeBatch",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getDeposit",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getNonce",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "anOwner",
+              type: "address",
+            },
+          ],
+          name: "initialize",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "uint256[]",
+              name: "",
+              type: "uint256[]",
+            },
+            {
+              internalType: "uint256[]",
+              name: "",
+              type: "uint256[]",
+            },
+            {
+              internalType: "bytes",
+              name: "",
+              type: "bytes",
+            },
+          ],
+          name: "onERC1155BatchReceived",
+          outputs: [
+            {
+              internalType: "bytes4",
+              name: "",
+              type: "bytes4",
+            },
+          ],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+            {
+              internalType: "bytes",
+              name: "",
+              type: "bytes",
+            },
+          ],
+          name: "onERC1155Received",
+          outputs: [
+            {
+              internalType: "bytes4",
+              name: "",
+              type: "bytes4",
+            },
+          ],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+            {
+              internalType: "bytes",
+              name: "",
+              type: "bytes",
+            },
+          ],
+          name: "onERC721Received",
+          outputs: [
+            {
+              internalType: "bytes4",
+              name: "",
+              type: "bytes4",
+            },
+          ],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "owner",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "proxiableUUID",
+          outputs: [
+            {
+              internalType: "bytes32",
+              name: "",
+              type: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "bytes4",
+              name: "interfaceId",
+              type: "bytes4",
+            },
+          ],
+          name: "supportsInterface",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+            {
+              internalType: "bytes",
+              name: "",
+              type: "bytes",
+            },
+            {
+              internalType: "bytes",
+              name: "",
+              type: "bytes",
+            },
+          ],
+          name: "tokensReceived",
+          outputs: [],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "newImplementation",
+              type: "address",
+            },
+          ],
+          name: "upgradeTo",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "newImplementation",
+              type: "address",
+            },
+            {
+              internalType: "bytes",
+              name: "data",
+              type: "bytes",
+            },
+          ],
+          name: "upgradeToAndCall",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              components: [
+                {
+                  internalType: "address",
+                  name: "sender",
+                  type: "address",
+                },
+                {
+                  internalType: "uint256",
+                  name: "nonce",
+                  type: "uint256",
+                },
+                {
+                  internalType: "bytes",
+                  name: "initCode",
+                  type: "bytes",
+                },
+                {
+                  internalType: "bytes",
+                  name: "callData",
+                  type: "bytes",
+                },
+                {
+                  internalType: "uint256",
+                  name: "callGasLimit",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "verificationGasLimit",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "preVerificationGas",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "maxFeePerGas",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "maxPriorityFeePerGas",
+                  type: "uint256",
+                },
+                {
+                  internalType: "bytes",
+                  name: "paymasterAndData",
+                  type: "bytes",
+                },
+                {
+                  internalType: "bytes",
+                  name: "signature",
+                  type: "bytes",
+                },
+              ],
+              internalType: "struct UserOperation",
+              name: "userOp",
+              type: "tuple",
+            },
+            {
+              internalType: "bytes32",
+              name: "userOpHash",
+              type: "bytes32",
+            },
+            {
+              internalType: "uint256",
+              name: "missingAccountFunds",
+              type: "uint256",
+            },
+          ],
+          name: "validateUserOp",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "validationData",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address payable",
+              name: "withdrawAddress",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+          ],
+          name: "withdrawDepositTo",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          stateMutability: "payable",
+          type: "receive",
         },
       ],
     },

@@ -6,11 +6,11 @@ import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
 import { Modal, Popover, Radio, message } from "antd";
 import { BigNumber } from "ethers";
-import { encodeFunctionData, formatEther, parseAbi, parseEther } from "viem";
+import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
-import externalContracts from "~~/contracts/externalContracts";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 function Swap() {
@@ -44,6 +44,10 @@ function Swap() {
   const publicClient = usePublicClient();
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
+  const [walletAPI, setWalletAPI] = useState<any>(null);
+  const [bundler, setBundler] = useState<any>(null);
+  const [userSCWalletAddress, setUserSCWalletAddress] = useState<any>("");
+  console.log("userSCWalletAddress: ", userSCWalletAddress);
 
   const provider = useEthersProvider();
   console.log("provider: ", provider);
@@ -56,18 +60,47 @@ function Swap() {
     contractName: "UNISWAP_ROUTER02",
     walletClient,
   });
-
+  const { data: uniswapFactory } = useScaffoldContract({
+    contractName: "UNISWAP_FACTORY",
+    walletClient,
+  });
   const { data: token1 } = useScaffoldContract({
     contractName: "TOKEN1",
     walletClient,
   });
-
   const { data: token2 } = useScaffoldContract({
     contractName: "TOKEN2",
     walletClient,
   });
 
   const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://0.0.0.0:14337/80001";
+
+  useEffect(() => {
+    (async () => {
+      if (signer && provider) {
+        const network = await provider.getNetwork();
+
+        const walletAPIInstance = new SimpleAccountAPI({
+          provider,
+          entryPointAddress: ENTRY_POINT,
+          owner: signer,
+          factoryAddress: FACTORY_ADDRESS,
+        });
+        console.log("walletAPIInstance: ", walletAPIInstance);
+
+        setWalletAPI(walletAPIInstance);
+
+        const bundlerInstance = new HttpRpcClient(bundlerUrl, ENTRY_POINT, parseInt(network.chainId.toString()));
+        setBundler(bundlerInstance);
+
+        console.log("walletAPIInstance.accountAddress: ", await walletAPIInstance.getAccountAddress());
+        setUserSCWalletAddress(await walletAPIInstance.getAccountAddress());
+      }
+    })();
+  }, [signer, provider]);
+
+  const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
+  console.log("userOperations: ", userOperations);
 
   // const { data, sendTransaction } = useSendTransaction({
   // 	request: {
@@ -143,26 +176,22 @@ function Swap() {
         setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
         setTokenTwoLimitPrice(price.toString());
       }
-
-      // const res = await axios.get(`http://localhost:3001/tokenPrice`, {
-      // 	params: { addressOne: one, addressTwo: two },
-      // });
     }
   }
 
   const executeSwap = async () => {
     try {
-      if (signer && provider && address && token1 && token2 && uniswapRouter02) {
-        const network = await provider.getNetwork();
-
-        const walletAPI = new SimpleAccountAPI({
-          provider,
-          entryPointAddress: ENTRY_POINT,
-          owner: signer,
-          factoryAddress: FACTORY_ADDRESS,
-        });
-        const bundler = new HttpRpcClient(bundlerUrl, ENTRY_POINT, parseInt(network.chainId.toString()));
-
+      if (
+        signer &&
+        provider &&
+        address &&
+        token1 &&
+        token2 &&
+        uniswapRouter02 &&
+        uniswapFactory &&
+        walletAPI &&
+        bundler
+      ) {
         // const dataToken1Approve = encodeFunctionData({
         //   abi: token1?.abi as unknown as any,
         //   args: [uniswapRouter02?.address, BigInt(tokenOneAmount) * 10n ** 18n],
@@ -192,8 +221,8 @@ function Swap() {
         const data = encodeFunctionData({
           abi: uniswapRouter02?.abi as unknown as any,
           args: [
-            parseEther(tokenOneAmount.toString()),
-            parseEther(tokenTwoLimitPrice.toString()),
+            parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
+            parseUnits(tokenTwoLimitPrice.toString(), tokenTwo.decimals),
             [tokenOne.address, tokenTwo.address],
             address,
             BigInt(new Date().valueOf() + 3600 * 24 * 120),
@@ -202,23 +231,50 @@ function Swap() {
         });
         console.log("data: ", data);
 
+        const poolData = await uniswapFactory.read.getPair([tokenOne.address, tokenTwo.address]);
+        console.log("poolData: ", poolData);
+
+        const unsignedUserOp = await walletAPI.createUnsignedUserOp({
+          target: uniswapRouter02?.address,
+          data,
+          maxFeePerGas: BigNumber.from("1500000032"),
+          maxPriorityFeePerGas: BigNumber.from("1500000000"),
+          gasLimit: BigNumber.from("1500320"),
+          value: 0n,
+        });
+        console.log("unsignedUserOp: ", unsignedUserOp);
+
+        // const key = await bundler.getValidNonceKey(unsignedUserOp as any);
+        // console.log("key: ", key);
+        console.log("uniswapRouter02: ", uniswapRouter02?.address);
+
         const op = await walletAPI.createSignedUserOp({
           target: uniswapRouter02?.address,
           data,
           maxFeePerGas: BigNumber.from("1500000032"),
           maxPriorityFeePerGas: BigNumber.from("1500000000"),
           gasLimit: BigNumber.from("1500320"),
+          value: 0n,
         });
-        console.log("op: ", op);
+
+        // const signedUserOp = await walletAPI.signUserOp(unsignedUserOp);
+
+        let evaluationStatement;
+
+        if (tokenOne.address < tokenTwo.address) {
+          evaluationStatement = `:reserve1: / :reserve0: >= ${tokenTwoLimitPrice}`;
+        } else {
+          evaluationStatement = `:reserve0: / :reserve1: >= ${tokenTwoLimitPrice}`;
+        }
+        console.log("evaluationStatement: ", evaluationStatement);
 
         const advancedOp: AdvancedUserOperationStruct = {
           ...op,
           advancedUserOperation: {
             triggerEvent: {
-              contractAddress: uniswapRouter02?.address,
-              eventSignature:
-                "event Swap(address indexed sender,uint amount0In,uint amount1In,uint amount0Out,uint amount1Out,address indexed to);",
-              evaluationStatement: `:amount0In: / :amount1Out: >= ${tokenTwoLimitPrice}`,
+              contractAddress: poolData,
+              eventSignature: "event Sync(uint112 reserve0, uint112 reserve1);",
+              evaluationStatement,
             },
           },
         };
@@ -237,77 +293,6 @@ function Swap() {
   useEffect(() => {
     if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
   }, [tokenOne, tokenTwo, tokenOneAmount]);
-
-  useEffect(() => {
-    if (txDetails.to && address) {
-      // sendTransaction();
-    }
-  }, [txDetails, address]);
-
-  // async function fetchDexSwap() {
-  // 	const allowance = await axios.get(
-  // 		`https://api.1inch.io/v5.0/1/approve/allowance?tokenAddress=${tokenOne.address}&walletAddress=${address}`
-  // 	);
-
-  // 	if (allowance.data.allowance === "0") {
-  // 		const approve = await axios.get(
-  // 			`https://api.1inch.io/v5.0/1/approve/transaction?tokenAddress=${tokenOne.address}`
-  // 		);
-
-  // 		setTxDetails(approve.data);
-  // 		console.log("not approved");
-  // 		return;
-  // 	}
-
-  // 	const tx = await axios.get(
-  // 		`https://api.1inch.io/v5.0/1/swap?fromTokenAddress=${
-  // 			tokenOne.address
-  // 		}&toTokenAddress=${tokenTwo.address}&amount=${tokenOneAmount.padEnd(
-  // 			tokenOne.decimals + tokenOneAmount.length,
-  // 			"0"
-  // 		)}&fromAddress=${address}&slippage=${slippage}`
-  // 	);
-
-  // 	let decimals = Number(`1E${tokenTwo.decimals}`);
-  // 	setTokenTwoAmount(
-  // 		(Number(tx.data.toTokenAmount) / decimals).toFixed(2)
-  // 	);
-
-  // 	setTxDetails(tx.data.tx);
-  // }
-
-  // useEffect(() => {
-  // 	fetchPrices(tokenList[0].address, tokenList[1].address);
-  // }, []);
-
-  // useEffect(() => {
-  // 	messageApi.destroy();
-
-  // 	if (isLoading) {
-  // 		messageApi.open({
-  // 			type: "loading",
-  // 			content: "Transaction is Pending...",
-  // 			duration: 0,
-  // 		});
-  // 	}
-  // }, [isLoading]);
-
-  // useEffect(() => {
-  // 	messageApi.destroy();
-  // 	if (isSuccess) {
-  // 		messageApi.open({
-  // 			type: "success",
-  // 			content: "Transaction Successful",
-  // 			duration: 1.5,
-  // 		});
-  // 	} else if (txDetails.to) {
-  // 		messageApi.open({
-  // 			type: "error",
-  // 			content: "Transaction Failed",
-  // 			duration: 1.5,
-  // 		});
-  // 	}
-  // }, [isSuccess]);
 
   const settings = (
     <>
@@ -441,14 +426,63 @@ function Swap() {
           </div>
         </div>
 
-        <button
+        {userOperationsLoading ? (
+          <div className="text-gray-400 text-xs">Loading...</div>
+        ) : (
+          <>
+            {userOperations && userOperations.length > 0 ? (
+              userOperations.map(userOp => (
+                <>
+                  <div className="text-gray-400 text-xs">
+                    Amount In -{" "}
+                    {formatUnits(
+                      userOp.swapParams.args[0].toString(),
+                      tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.decimals || 18,
+                    ).toString()}
+                  </div>
+                  <div className="text-gray-400 text-xs">
+                    Limit Order Price For Token 2 -{" "}
+                    {formatUnits(
+                      userOp.swapParams.args[1].toString(),
+                      tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.decimals || 18,
+                    ).toString()}
+                  </div>
+
+                  <div style={{ display: "flex" }}>
+                    <div className="text-gray-400 text-xs">
+                      <img
+                        src={tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.img}
+                        alt="assetOneLogo"
+                        className="h-5 ml-2"
+                      />
+                      {tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.ticker}
+                    </div>
+                    {"  => "}
+                    <div className="text-gray-400 text-xs">
+                      <img
+                        src={tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.img}
+                        alt="assetOneLogo"
+                        className="h-5 ml-2"
+                      />
+                      {tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.ticker}
+                    </div>
+                  </div>
+                </>
+              ))
+            ) : (
+              <div className="text-gray-400 text-xs">No user Operations</div>
+            )}
+          </>
+        )}
+
+        {/* <button
           className={getSwapBtnClassName()}
           onClick={() => {
             //fetchDexSwap()
           }}
         >
           {address == null ? "Connect Wallet" : "Swap"}
-        </button>
+        </button> */}
       </div>
     </>
   );

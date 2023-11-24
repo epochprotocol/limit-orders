@@ -6767,7 +6767,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.4.0, axios@npm:^1.5.1":
+"axios@npm:^1.4.0, axios@npm:^1.5.1, axios@npm:^1.6.2":
   version: 1.6.2
   resolution: "axios@npm:1.6.2"
   dependencies:
@@ -16910,6 +16910,7 @@ __metadata:
   resolution: "se-2@workspace:."
   dependencies:
     "@epoch-protocol/sdk": 0.8.4
+    axios: ^1.6.2
     ethers: ^5.7.0
     husky: ^8.0.1
     lint-staged: ^13.0.3
