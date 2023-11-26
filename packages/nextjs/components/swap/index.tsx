@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import tokenList from "../../components/assets/tokenList.json";
-import UniswapV2Router02ABI from "../../contracts/UniswapV2Router02ABI";
-import { DownOutlined, SettingOutlined } from "@ant-design/icons";
-import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
+import { DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
-import { Modal, Popover, Radio, message } from "antd";
+import { Divider, Modal, Popover, Radio, message } from "antd";
 import { BigNumber } from "ethers";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -19,7 +18,10 @@ function Swap() {
       "absolute h-8 bg-[#3a4157] flex justify-start items-center font-bold text-base pr-2 top-[25px] right-[20px] rounded-full gap-[5px] hover:cursor-pointer",
     modalContent: "mt-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
     inputTile: "relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600",
+    inputTileSmall:
+      "relative bg-[#212429] m-2 p-1 py-2 rounded-xl mb-2 border-[1px] border-outlined hover:border-zinc-600",
     inputField: "w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent",
+    inputFiledSmall: "w-full outline-none h-4 px-2 appearance-none text-lg bg-transparent",
     inputFlex: "flex items-center rounded-xl",
   };
 
@@ -31,6 +33,7 @@ function Swap() {
   const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
   const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
   const [tokenTwoLimitPrice, setTokenTwoLimitPrice] = useState<string>("");
+  const [tokenTwoLimitAmount, setTokenTwoLimitAmount] = useState<string>("");
   const [tokenOne, setTokenOne] = useState(tokenList[0]);
   const [tokenTwo, setTokenTwo] = useState(tokenList[1]);
   const [isOpen, setIsOpen] = useState(false);
@@ -99,6 +102,10 @@ function Swap() {
     })();
   }, [signer, provider]);
 
+  useEffect(() => {
+    setTokenTwoLimitAmount((Number(tokenTwoLimitPrice) * Number(tokenOneAmount)).toString());
+  }, [tokenTwoLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
+
   const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
   console.log("userOperations: ", userOperations);
 
@@ -129,7 +136,32 @@ function Swap() {
   // 	}
   // }
 
-  function switchTokens() {
+  function reload() {
+    setPrices(0);
+    setTokenOneAmount("0");
+    setTokenTwoAmount("0");
+    setIsOpen(false);
+
+    setSlippage(2.5);
+    setTokenTwoLimitPrice("");
+    setTokenTwoLimitAmount("");
+    setTokenOne(tokenList[0]);
+    setTokenTwo(tokenList[1]);
+    setIsOpen(false);
+    setChangeToken(1);
+    setPrices(0);
+    setTxDetails({
+      to: null,
+      data: null,
+      value: null,
+    });
+    setNeedToIncreaseAllowance(false);
+    setWalletAPI(null);
+    setBundler(null);
+    setUserSCWalletAddress("");
+  }
+
+  async function switchTokens() {
     setPrices(0);
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
@@ -138,7 +170,10 @@ function Swap() {
     setTokenOne(two);
     setTokenTwo(one);
 
-    fetchPrices(two.address, one.address);
+    await fetchPrices(two.address, one.address).then(price => {
+      setTokenTwoLimitPrice(price.toString());
+      setTokenTwoLimitAmount((Number(tokenTwoLimitPrice) * Number(tokenOneAmount)).toString());
+    });
   }
 
   function openModal(asset: React.SetStateAction<number>) {
@@ -158,7 +193,7 @@ function Swap() {
     setIsOpen(false);
   }
 
-  async function fetchPrices(one: string, two: string) {
+  async function fetchPrices(one: string, two: string): Promise<Number> {
     console.log("We are here");
     console.log(parseEther(tokenOneAmount.toString()));
     console.log("publicClient: ", publicClient);
@@ -174,9 +209,14 @@ function Swap() {
         console.log("price have arrived", price);
         setPrices(price);
         setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
-        setTokenTwoLimitPrice(price.toString());
+        if (tokenTwoLimitPrice.length == 0) {
+          setTokenTwoLimitPrice(price.toString());
+          setTokenTwoLimitAmount((Number(tokenTwoLimitPrice) * Number(tokenOneAmount)).toString());
+        }
+        return price;
       }
     }
+    return 0;
   }
 
   const executeSwap = async () => {
@@ -222,7 +262,7 @@ function Swap() {
           abi: uniswapRouter02?.abi as unknown as any,
           args: [
             parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
-            parseUnits(tokenTwoLimitPrice.toString(), tokenTwo.decimals),
+            parseUnits(tokenTwoLimitAmount.toString(), tokenTwo.decimals),
             [tokenOne.address, tokenTwo.address],
             address,
             BigInt(new Date().valueOf() + 3600 * 24 * 120),
@@ -262,9 +302,9 @@ function Swap() {
         let evaluationStatement;
 
         if (tokenOne.address < tokenTwo.address) {
-          evaluationStatement = `:reserve1: / :reserve0: >= ${tokenTwoLimitPrice}`;
+          evaluationStatement = `:reserve1: / :reserve0: >= ${tokenTwoLimitAmount}`;
         } else {
-          evaluationStatement = `:reserve0: / :reserve1: >= ${tokenTwoLimitPrice}`;
+          evaluationStatement = `:reserve0: / :reserve1: >= ${tokenTwoLimitAmount}`;
         }
         console.log("evaluationStatement: ", evaluationStatement);
 
@@ -307,6 +347,11 @@ function Swap() {
     </>
   );
 
+  //TODO fix this thing
+  if (tokenOneAmount == "") {
+    fetchPrices(tokenOne.address, tokenTwo.address);
+  }
+
   return (
     <>
       {contextHolder}
@@ -329,20 +374,22 @@ function Swap() {
           })}
         </div>
       </Modal>
-
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
           <div>Swap</div>
-          <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
-            <SettingOutlined className="h-6" />
-          </Popover>
+          <div>
+            <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
+              <SettingOutlined className="h-6 px-2" />
+            </Popover>
+            <ReloadOutlined className="h-6" onClick={reload} />
+          </div>
         </div>
         <div className={styles.inputTile}>
           <div className={styles.inputFlex}>
             <input
               placeholder="0"
               className={styles.inputField}
-              value={tokenOneAmount?.toString()}
+              defaultValue={tokenOneAmount?.toString()}
               onChange={e => {
                 setTokenOneAmount(e.target.value);
               }}
@@ -366,11 +413,10 @@ function Swap() {
           <div className={styles.inputFlex}>
             <input
               placeholder="0"
-              className={styles.inputField}
-              defaultValue={tokenTwoAmount}
-              // disabled={!prices}
+              className={styles.inputField + " text-gray-400"}
+              defaultValue={tokenTwoLimitAmount}
+              disabled={true}
             />
-
             <div className={styles.assetStyle} onClick={() => openModal(2)}>
               <img src={tokenTwo.img} alt="assetTwoLogo" className="h-5 ml-2" />
               {tokenTwo.ticker}
@@ -378,20 +424,47 @@ function Swap() {
             </div>
           </div>
         </div>
-        <div className="text-gray-400 text-xs">Current Exchange: {prices.toFixed(5)}</div>
-
-        <div className={styles.inputTile}>
-          <div className={styles.inputFlex}>
-            <input
-              placeholder="0"
-              className={styles.inputField}
-              value={tokenTwoLimitPrice?.toString()}
-              onChange={e => {
-                setTokenTwoLimitPrice(e.target.value);
-              }}
-              // disabled={!prices}
-            />
+        <div className="text-gray-400 text-xs">
+          <div className="font-bold">Current Exchange Rates:</div>
+          <div className="pl-2">
+            1 {tokenOne.ticker} ={" "}
+            <a
+              className="underline text-blue-400 hover:cursor-pointer"
+              onClick={() => setTokenTwoLimitPrice(prices.toString())}
+            >
+              {prices.toFixed(5)} {tokenTwo.ticker}
+            </a>
           </div>
+          <div className="pl-2">
+            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
+          </div>
+          {/* <div className="pl-2">
+            Buy at 1 {tokenOne.ticker} = {tokenTwoLimitPrice} {tokenTwo.ticker}
+          </div>
+          <div className="pl-2">
+            Buy at {tokenOneAmount} {tokenOne.ticker} = {tokenTwoLimitAmount} {tokenTwo.ticker}
+          </div> */}
+        </div>
+
+        <Divider style={{ borderColor: "grey", borderWidth: "0.5" }}>
+          <div className="text-sm text-gray-200">You want to buy it at</div>
+        </Divider>
+        <div className="flex flex-row items-center">
+          1 {tokenOne.ticker} =
+          <div className={styles.inputTileSmall}>
+            <div className={styles.inputFlex}>
+              <input
+                placeholder="0"
+                className={styles.inputFiledSmall}
+                value={tokenTwoLimitPrice?.toString()}
+                onChange={e => {
+                  setTokenTwoLimitPrice(e.target.value);
+                }}
+                // disabled={!prices}
+              />
+            </div>
+          </div>
+          {tokenTwo.ticker}
         </div>
 
         <button className={getSwapBtnClassName()} onClick={executeSwap}>
@@ -399,31 +472,9 @@ function Swap() {
         </button>
       </div>
 
-      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl" style={{ color: "white", marginLeft: "2rem" }}>
+      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl w-[30%]" style={{ color: "white", marginLeft: "2rem" }}>
         <div className="flex items-center justify-between py-3 px-1">
           <div>Your Orders</div>
-          <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
-            <SettingOutlined className="h-6" />
-          </Popover>
-        </div>
-        <div className={styles.inputTile}>
-          <div className={styles.inputFlex}>
-            <input
-              placeholder="0"
-              className={styles.inputField}
-              value={tokenOneAmount?.toString()}
-              onChange={e => {
-                setTokenOneAmount(e.target.value);
-              }}
-              // disabled={!prices}
-            />
-
-            <div className={styles.assetStyle} onClick={() => openModal(1)}>
-              <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
-              {tokenOne.ticker}
-              <DownOutlined rev={undefined} />
-            </div>
-          </div>
         </div>
 
         {userOperationsLoading ? (
