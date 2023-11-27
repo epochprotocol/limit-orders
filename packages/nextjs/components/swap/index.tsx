@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import tokenList from "../../components/assets/tokenList.json";
 import { DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
-import { SimpleAccountAPI } from "@epoch-protocol/sdk";
+import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
 import { Divider, Modal, Popover, Radio, message } from "antd";
 import { BigNumber } from "ethers";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { XMarkIcon } from "@heroicons/react/20/solid";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
@@ -47,8 +48,8 @@ function Swap() {
   const publicClient = usePublicClient();
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
-  const [walletAPI, setWalletAPI] = useState<any>(null);
-  const [bundler, setBundler] = useState<any>(null);
+  const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
+  const [bundler, setBundler] = useState<HttpRpcClient | null>(null);
   const [userSCWalletAddress, setUserSCWalletAddress] = useState<any>("");
   console.log("userSCWalletAddress: ", userSCWalletAddress);
 
@@ -283,10 +284,13 @@ function Swap() {
           value: 0n,
         });
         console.log("unsignedUserOp: ", unsignedUserOp);
+        console.log("uniswapRouter02: ", uniswapRouter02?.address);
 
         // const key = await bundler.getValidNonceKey(unsignedUserOp as any);
         // console.log("key: ", key);
-        console.log("uniswapRouter02: ", uniswapRouter02?.address);
+
+        // const nonce = await walletAPI.getNonce(key);
+        // console.log("nonce: ", nonce);
 
         const op = await walletAPI.createSignedUserOp({
           target: uniswapRouter02?.address,
@@ -295,6 +299,7 @@ function Swap() {
           maxPriorityFeePerGas: BigNumber.from("1500000000"),
           gasLimit: BigNumber.from("1500320"),
           value: 0n,
+          // nonce,
         });
 
         // const signedUserOp = await walletAPI.signUserOp(unsignedUserOp);
@@ -328,6 +333,10 @@ function Swap() {
     } catch (error) {
       console.log("error: ", error);
     }
+  };
+
+  const deleteOrder = async (userOp: any) => {
+    console.log("userOp: ", userOp.userOp.nonce);
   };
 
   useEffect(() => {
@@ -484,38 +493,49 @@ function Swap() {
             {userOperations && userOperations.length > 0 ? (
               userOperations.map(userOp => (
                 <>
-                  <div className="text-gray-400 text-xs">
-                    Amount In -{" "}
-                    {formatUnits(
-                      userOp.swapParams.args[0].toString(),
-                      tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.decimals || 18,
-                    ).toString()}
-                  </div>
-                  <div className="text-gray-400 text-xs">
-                    Limit Order Price For Token 2 -{" "}
-                    {formatUnits(
-                      userOp.swapParams.args[1].toString(),
-                      tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.decimals || 18,
-                    ).toString()}
-                  </div>
-
-                  <div style={{ display: "flex" }}>
-                    <div className="text-gray-400 text-xs">
-                      <img
-                        src={tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.img}
-                        alt="assetOneLogo"
-                        className="h-5 ml-2"
-                      />
-                      {tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.ticker}
+                  <div className="flex">
+                    <div>
+                      <div className="text-gray-400 text-xs">
+                        Amount In -{" "}
+                        {formatUnits(
+                          userOp.swapParams.args[0].toString(),
+                          tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.decimals || 18,
+                        ).toString()}
+                      </div>
+                      <div className="text-gray-400 text-xs">
+                        Limit Order Price For Token 2 -{" "}
+                        {formatUnits(
+                          userOp.swapParams.args[1].toString(),
+                          tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.decimals || 18,
+                        ).toString()}
+                      </div>
                     </div>
-                    {"  => "}
-                    <div className="text-gray-400 text-xs">
-                      <img
-                        src={tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.img}
-                        alt="assetOneLogo"
-                        className="h-5 ml-2"
-                      />
-                      {tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.ticker}
+
+                    <div className="flex">
+                      <div className="text-gray-400 text-xs">
+                        <img
+                          src={tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.img}
+                          alt="assetOneLogo"
+                          className="h-5 ml-2"
+                        />
+                        {tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.ticker}
+                      </div>
+                      {"  => "}
+                      <div className="text-gray-400 text-xs">
+                        <img
+                          src={tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.img}
+                          alt="assetOneLogo"
+                          className="h-5 ml-2"
+                        />
+                        {tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.ticker}
+                      </div>
+                      <div
+                        onClick={() => {
+                          deleteOrder(userOp);
+                        }}
+                      >
+                        <XMarkIcon className="w-6 h-6 text-gray-500" />
+                      </div>
                     </div>
                   </div>
                 </>

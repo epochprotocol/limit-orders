@@ -39,7 +39,8 @@
     "usehooks-ts@^2.7.2": "patch:usehooks-ts@npm:^2.7.2#./.yarn/patches/usehooks-ts-npm-2.7.2-fceffe0e43.patch"
   },
   "dependencies": {
-    "@epoch-protocol/sdk": "0.8.4",
+    "@account-abstraction/utils": "^0.6.0",
+    "@epoch-protocol/sdk": "0.8.6",
     "axios": "^1.6.2",
     "viem": "^1.19.3"
   }
