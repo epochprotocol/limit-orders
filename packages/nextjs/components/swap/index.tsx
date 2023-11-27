@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import tokenList from "../../components/assets/tokenList.json";
-import { DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
 import { Divider, Modal, Popover, Radio, message } from "antd";
 import { BigNumber } from "ethers";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
-import { XMarkIcon } from "@heroicons/react/20/solid";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
@@ -200,12 +199,12 @@ function Swap() {
     console.log("publicClient: ", publicClient);
 
     if (uniswapRouter02 && uniswapRouter02.address) {
-      const data = await uniswapRouter02.read.getAmountsOut([BigInt(parseEther("1").toString()), [one, two]]);
+      const data: any = await uniswapRouter02.read.getAmountsOut([BigInt(parseEther("1").toString()), [one, two]]);
 
       if (data) {
         console.log("data: ", data);
 
-        const price = Number(formatEther(data[1]));
+        const price = Number(formatEther(data[1] as bigint));
         console.log("price: ", price);
         console.log("price have arrived", price);
         setPrices(price);
@@ -317,7 +316,7 @@ function Swap() {
           ...op,
           advancedUserOperation: {
             triggerEvent: {
-              contractAddress: poolData,
+              contractAddress: poolData as string,
               eventSignature: "event Sync(uint112 reserve0, uint112 reserve1);",
               evaluationStatement,
             },
@@ -481,9 +480,10 @@ function Swap() {
         </button>
       </div>
 
-      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl w-[30%]" style={{ color: "white", marginLeft: "2rem" }}>
-        <div className="flex items-center justify-between py-3 px-1">
-          <div>Your Orders</div>
+      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl w-[35%] " style={{ color: "white", marginLeft: "2rem" }}>
+        <div className="flex items-center justify-start py-3 px-1">
+          s<div>Your Orders:</div>
+          <div className="bg-[#212429] px-2 p-1 rounded-lg mx-3">{userOperations.length}</div>
         </div>
 
         {userOperationsLoading ? (
@@ -491,55 +491,82 @@ function Swap() {
         ) : (
           <>
             {userOperations && userOperations.length > 0 ? (
-              userOperations.map(userOp => (
-                <>
-                  <div className="flex">
-                    <div>
-                      <div className="text-gray-400 text-xs">
-                        Amount In -{" "}
-                        {formatUnits(
-                          userOp.swapParams.args[0].toString(),
-                          tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.decimals || 18,
-                        ).toString()}
-                      </div>
-                      <div className="text-gray-400 text-xs">
-                        Limit Order Price For Token 2 -{" "}
-                        {formatUnits(
-                          userOp.swapParams.args[1].toString(),
-                          tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.decimals || 18,
-                        ).toString()}
-                      </div>
-                    </div>
+              userOperations.map(userOp => {
+                const _tokenOne = tokenList.find(token => token.address === userOp.swapParams.args[2][0]);
+                const _tokenTwo = tokenList.find(token => token.address === userOp.swapParams.args[2][1]);
+                const _tokenOneAmount = formatUnits(
+                  userOp.swapParams.args[0].toString(),
+                  _tokenOne?.decimals || 18,
+                ).toString();
+                const _tokenTwoAmount = formatUnits(
+                  userOp.swapParams.args[1].toString(),
+                  _tokenTwo?.decimals || 18,
+                ).toString();
 
-                    <div className="flex">
-                      <div className="text-gray-400 text-xs">
-                        <img
-                          src={tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.img}
-                          alt="assetOneLogo"
-                          className="h-5 ml-2"
-                        />
-                        {tokenList.find(token => token.address === userOp.swapParams.args[2][0])?.ticker}
-                      </div>
-                      {"  => "}
-                      <div className="text-gray-400 text-xs">
-                        <img
-                          src={tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.img}
-                          alt="assetOneLogo"
-                          className="h-5 ml-2"
-                        />
-                        {tokenList.find(token => token.address === userOp.swapParams.args[2][1])?.ticker}
-                      </div>
+                return (
+                  <>
+                    <div className="flex-grow items-centre border border-[#3a4157] rounded-lg p-4 shadow-md bg-[#212429] relative">
                       <div
+                        className="absolute top-0 right-1 text-gray-300 hover:text-gray-500 cursor-pointer"
                         onClick={() => {
                           deleteOrder(userOp);
                         }}
                       >
-                        <XMarkIcon className="w-6 h-6 text-gray-500" />
+                        <CloseCircleOutlined className=" text-gray-500 hover:text-gray-500 cursor-pointer" />
+                      </div>
+
+                      <div className="flex items-centre">
+                        <div className="flex grow items-center ">
+                          <img src={_tokenOne?.img} alt={`${_tokenOne?.ticker} Logo`} className="h-6 w-6 mr-2" />
+                          <div className="text-lg font-semibold">{`${_tokenOneAmount} ${_tokenOne?.ticker}`}</div>
+                        </div>
+                        <div className="text-gray-500 mx-2">
+                          <ArrowSmallDownIcon className=" -rotate-90 z-10 h-8 p-1 bg-[#212429] border-4 border-zinc-900 text-zinc-300 rounded-xl cursor-pointer hover:scale-110" />
+                        </div>
+
+                        <div className="flex grow items-center">
+                          <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
+                          <div className="text-lg font-semibold">{`${_tokenTwoAmount} ${tokenTwo.ticker}`}</div>
+                        </div>
+                      </div>
+                      <div className="text-gray-400 text mt-2">
+                        You are swapping {_tokenOneAmount} {_tokenOne?.ticker} for {_tokenTwoAmount} {_tokenTwo?.ticker}
                       </div>
                     </div>
-                  </div>
-                </>
-              ))
+                    {/* <div className="flex">
+                      <div>
+                        <div className="text-gray-400 text-xs">
+                          Swap -{" "}
+                          {}
+                        </div>
+                        <div className="text-gray-400 text-xs">
+                          Limit Order Price For Token 2 -{" "}
+                          {formatUnits(userOp.swapParams.args[1].toString(), _tokenTwo?.decimals || 18).toString()}
+                        </div>
+                      </div>
+
+                      <div className="flex">
+                        <div className="text-gray-400 text-xs">
+                          <img src={_tokenOne?.img} alt="assetOneLogo" className="h-5 ml-2" />
+                          {_tokenOne?.ticker}
+                        </div>
+                        {"  => "}
+                        <div className="text-gray-400 text-xs">
+                          <img src={_tokenTwo?.img} alt="assetOneLogo" className="h-5 ml-2" />
+                          {_tokenTwo?.ticker}
+                        </div>
+                        <div
+                          onClick={() => {
+                            deleteOrder(userOp);
+                          }}
+                        >
+                          <XMarkIcon className="w-6 h-6 text-gray-500" />
+                        </div>
+                      </div>
+                    </div> */}
+                  </>
+                );
+              })
             ) : (
               <div className="text-gray-400 text-xs">No user Operations</div>
             )}
