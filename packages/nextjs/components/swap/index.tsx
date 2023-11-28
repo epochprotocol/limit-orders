@@ -136,8 +136,7 @@ function Swap() {
   // 	}
   // }
 
-  function reload() {
-    setPrices(0);
+  async function reload() {
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
     setIsOpen(false);
@@ -482,7 +481,7 @@ function Swap() {
 
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl w-[35%] " style={{ color: "white", marginLeft: "2rem" }}>
         <div className="flex items-center justify-start py-3 px-1">
-          s<div>Your Orders:</div>
+          <div>Your Orders:</div>
           <div className="bg-[#212429] px-2 p-1 rounded-lg mx-3">{userOperations.length}</div>
         </div>
 

@@ -1,8 +1,6 @@
 import type { NextPage } from "next";
-import { useWalletClient } from "wagmi";
 import { MetaHeader } from "~~/components/MetaHeader";
 import Swap from "~~/components/swap";
-import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 const Home: NextPage = () => {
   // useEffect(() => {
