@@ -1679,9 +1679,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@epoch-protocol/sdk@npm:0.8.6":
-  version: 0.8.6
-  resolution: "@epoch-protocol/sdk@npm:0.8.6"
+"@epoch-protocol/sdk@npm:0.8.7":
+  version: 0.8.7
+  resolution: "@epoch-protocol/sdk@npm:0.8.7"
   dependencies:
     "@account-abstraction/contracts": ^0.6.0
     "@epoch-protocol/utils": ^0.6.2
@@ -1693,7 +1693,7 @@ __metadata:
     "@types/debug": ^4.1.7
     debug: ^4.3.4
     ethers: ^5.7.0
-  checksum: 7dc3f3a03b13d20a36ffcc0730ab3b6c4b95c8f0c6c86eb03aadad04228e4a45676a0626eb59f54fb9057a68339c73dabb02ce0ac384f6934f50887be816194b
+  checksum: fc554175b18a6a0174ec7659abe2cb716a57823d74d6d0c8b3b84ec08fca6d3c6dffc66649cef8e9f997f6fb9c12c22116c29c4d0bffffac3da3f5b2239f9bff
   languageName: node
   linkType: hard
 
@@ -16909,7 +16909,7 @@ __metadata:
   resolution: "se-2@workspace:."
   dependencies:
     "@account-abstraction/utils": ^0.6.0
-    "@epoch-protocol/sdk": 0.8.6
+    "@epoch-protocol/sdk": 0.8.7
     axios: ^1.6.2
     ethers: ^5.7.0
     husky: ^8.0.1

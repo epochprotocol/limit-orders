@@ -284,23 +284,46 @@ function Swap() {
         console.log("unsignedUserOp: ", unsignedUserOp);
         console.log("uniswapRouter02: ", uniswapRouter02?.address);
 
-        // const key = await bundler.getValidNonceKey(unsignedUserOp as any);
-        // console.log("key: ", key);
+        // let newUserOp: any;
+        // unsignedUserOp.sender = await unsignedUserOp.sender
+        // Object.keys(unsignedUserOp).map(async (key: any) => {
+        //   newUserOp[key] = await unsignedUserOp[key];
+        // });
 
-        // const nonce = await walletAPI.getNonce(key);
-        // console.log("nonce: ", nonce);
+        const newUserOp: any = {
+          sender: await unsignedUserOp.sender,
+          nonce: await unsignedUserOp.nonce,
+          initCode: await unsignedUserOp.initCode,
+          callData: await unsignedUserOp.callData,
+          callGasLimit: await unsignedUserOp.callGasLimit,
+          verificationGasLimit: await unsignedUserOp.verificationGasLimit,
+          preVerificationGas: await unsignedUserOp.preVerificationGas,
+          maxFeePerGas: await unsignedUserOp.maxFeePerGas,
+          maxPriorityFeePerGas: await unsignedUserOp.maxPriorityFeePerGas,
+          paymasterAndData: await unsignedUserOp.paymasterAndData,
+          signature: await unsignedUserOp.signature,
+        };
 
-        const op = await walletAPI.createSignedUserOp({
-          target: uniswapRouter02?.address,
-          data,
-          maxFeePerGas: BigNumber.from("1500000032"),
-          maxPriorityFeePerGas: BigNumber.from("1500000000"),
-          gasLimit: BigNumber.from("1500320"),
-          value: 0n,
-          // nonce,
-        });
+        const key = await bundler.getValidNonceKey(newUserOp);
+        console.log("key: ", key);
 
-        // const signedUserOp = await walletAPI.signUserOp(unsignedUserOp);
+        const nonce = await walletAPI.getNonce(key);
+        console.log("nonce: ", nonce);
+
+        newUserOp.nonce = nonce;
+
+        // const op = await walletAPI.createSignedUserOp({
+        //   target: uniswapRouter02?.address,
+        //   data,
+        //   maxFeePerGas: BigNumber.from("1500000032"),
+        //   maxPriorityFeePerGas: BigNumber.from("1500000000"),
+        //   gasLimit: BigNumber.from("1500320"),
+        //   value: 0n,
+        //   // nonce,
+        // });
+
+        const signedUserOp = await walletAPI.signUserOp(newUserOp);
+        console.log("signedUserOp: ", signedUserOp);
 
         let evaluationStatement;
 
@@ -312,7 +335,7 @@ function Swap() {
         console.log("evaluationStatement: ", evaluationStatement);
 
         const advancedOp: AdvancedUserOperationStruct = {
-          ...op,
+          ...signedUserOp,
           advancedUserOperation: {
             triggerEvent: {
               contractAddress: poolData as string,
@@ -410,13 +433,13 @@ function Swap() {
             </div>
           </div>
 
-          <ArrowSmallDownIcon
+          {/* <ArrowSmallDownIcon
             className="absolute left-1/2 -translate-x-1/2 -bottom-6 z-10 h-10 p-1 bg-[#212429] border-4 border-zinc-900 text-zinc-300 rounded-xl cursor-pointer hover:scale-110"
             onClick={switchTokens}
-          />
+          /> */}
         </div>
 
-        <div className={styles.inputTile}>
+        {/* <div className={styles.inputTile}>
           <div className={styles.inputFlex}>
             <input
               placeholder="0"
@@ -430,7 +453,7 @@ function Swap() {
               <DownOutlined rev={undefined} />
             </div>
           </div>
-        </div>
+        </div> */}
         <div className="text-gray-400 text-xs">
           <div className="font-bold">Current Exchange Rates:</div>
           <div className="pl-2">
@@ -443,8 +466,17 @@ function Swap() {
             </a>
           </div>
           <div className="pl-2">
-            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
+            1 {tokenTwo.ticker} ={" "}
+            <a
+              className="underline text-blue-400 hover:cursor-pointer"
+              onClick={() => setTokenTwoLimitPrice(prices.toString())}
+            >
+              {(1 / prices).toFixed()} {tokenOne.ticker}
+            </a>
           </div>
+          {/* <div className="pl-2">
+            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
+          </div> */}
           {/* <div className="pl-2">
             Buy at 1 {tokenOne.ticker} = {tokenTwoLimitPrice} {tokenTwo.ticker}
           </div>
