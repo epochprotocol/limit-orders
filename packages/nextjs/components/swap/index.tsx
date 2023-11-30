@@ -3,7 +3,7 @@ import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
-import { Divider, Modal, Popover, Radio, message } from "antd";
+import { Divider, Modal, Popover, Radio, Select, message } from "antd";
 import { BigNumber } from "ethers";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -23,6 +23,7 @@ function Swap() {
     inputField: "w-full outline-none h-8 px-2 appearance-none text-3xl bg-transparent",
     inputFiledSmall: "w-full outline-none h-4 px-2 appearance-none text-lg bg-transparent",
     inputFlex: "flex items-center rounded-xl",
+    lableStyle: "text-gray-400 text-xs",
   };
 
   const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
@@ -50,12 +51,23 @@ function Swap() {
   const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
   const [bundler, setBundler] = useState<HttpRpcClient | null>(null);
   const [userSCWalletAddress, setUserSCWalletAddress] = useState<any>("");
-  console.log("userSCWalletAddress: ", userSCWalletAddress);
+  enum OrderTypes {
+    LimitOrder,
+    MarketOrder,
+    StopMarketOrder,
+  }
+  const orderTypes: Map<OrderTypes, string> = new Map([
+    [OrderTypes.LimitOrder, "Limit Order"],
+    [OrderTypes.MarketOrder, "Market Order"],
+    [OrderTypes.StopMarketOrder, "Stop-Market Order"],
+  ]);
+  const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
+  // console.log("userSCWalletAddress: ", userSCWalletAddress);
 
   const provider = useEthersProvider();
-  console.log("provider: ", provider);
+  // console.log("provider: ", provider);
   const signer = useEthersSigner();
-  console.log("signer: ", signer);
+  // console.log("signer: ", signer);
 
   const { data: walletClient } = useWalletClient();
 
@@ -107,7 +119,7 @@ function Swap() {
   }, [tokenTwoLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
 
   const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
-  console.log("userOperations: ", userOperations);
+  // console.log("userOperations: ", userOperations);
 
   // const { data, sendTransaction } = useSendTransaction({
   // 	request: {
@@ -193,19 +205,18 @@ function Swap() {
   }
 
   async function fetchPrices(one: string, two: string): Promise<Number> {
-    console.log("We are here");
-    console.log(parseEther(tokenOneAmount.toString()));
-    console.log("publicClient: ", publicClient);
+    // console.log(parseEther(tokenOneAmount.toString()));
+    // console.log("publicClient: ", publicClient);
 
     if (uniswapRouter02 && uniswapRouter02.address) {
       const data: any = await uniswapRouter02.read.getAmountsOut([BigInt(parseEther("1").toString()), [one, two]]);
 
       if (data) {
-        console.log("data: ", data);
+        // console.log("data: ", data);
 
         const price = Number(formatEther(data[1] as bigint));
-        console.log("price: ", price);
-        console.log("price have arrived", price);
+        // console.log("price: ", price);
+        // console.log("price have arrived", price);
         setPrices(price);
         setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
         if (tokenTwoLimitPrice.length == 0) {
@@ -268,7 +279,7 @@ function Swap() {
           ],
           functionName: "swapExactTokensForTokens",
         });
-        console.log("data: ", data);
+        // console.log("data: ", data);
 
         const poolData = await uniswapFactory.read.getPair([tokenOne.address, tokenTwo.address]);
         console.log("poolData: ", poolData);
@@ -345,7 +356,7 @@ function Swap() {
           },
         };
         console.log("advancedOp: ", advancedOp);
-        console.log("bundlerUrl: ", bundlerUrl);
+        // console.log("bundlerUrl: ", bundlerUrl);
 
         const userOpHash = await bundler.sendUserOpToBundler(advancedOp);
         const txid = await walletAPI.getUserOpReceipt(userOpHash);
@@ -406,7 +417,15 @@ function Swap() {
       </Modal>
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
-          <div>Swap</div>
+          <Select
+            defaultValue={orderType}
+            onChange={setOrderType}
+            popupMatchSelectWidth={false}
+            options={Array.from(orderTypes.entries()).map(([key, label]) => ({
+              label,
+              value: key,
+            }))}
+          />
           <div>
             <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
               <SettingOutlined className="h-6 px-2" />
@@ -415,17 +434,20 @@ function Swap() {
           </div>
         </div>
         <div className={styles.inputTile}>
-          <div className={styles.inputFlex}>
-            <input
-              placeholder="0"
-              className={styles.inputField}
-              defaultValue={tokenOneAmount?.toString()}
-              onChange={e => {
-                setTokenOneAmount(e.target.value);
-              }}
-              // disabled={!prices}
-            />
+          <div className="text-xs text-gray-500 absolute top-1">You sell</div>
 
+          <div className={styles.inputFlex}>
+            <div>
+              <input
+                placeholder="0"
+                className={styles.inputField}
+                defaultValue={tokenOneAmount?.toString()}
+                onChange={e => {
+                  setTokenOneAmount(e.target.value);
+                }}
+                // disabled={!prices}
+              />
+            </div>
             <div className={styles.assetStyle} onClick={() => openModal(1)}>
               <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
               {tokenOne.ticker}
@@ -433,13 +455,23 @@ function Swap() {
             </div>
           </div>
 
-          {/* <ArrowSmallDownIcon
+          <ArrowSmallDownIcon
             className="absolute left-1/2 -translate-x-1/2 -bottom-6 z-10 h-10 p-1 bg-[#212429] border-4 border-zinc-900 text-zinc-300 rounded-xl cursor-pointer hover:scale-110"
             onClick={switchTokens}
-          /> */}
+          />
         </div>
 
-        {/* <div className={styles.inputTile}>
+        <div className={styles.inputTile}>
+          {orderType == OrderTypes.LimitOrder ? (
+            <div className="text-xs text-gray-500 absolute top-1">You get atleast</div>
+          ) : orderType == OrderTypes.MarketOrder ? (
+            <div className="text-xs text-gray-500 absolute top-1">You get</div>
+          ) : orderType == OrderTypes.StopMarketOrder ? (
+            <div className="text-xs text-gray-500 absolute top-1">You get atmost</div>
+          ) : (
+            <></>
+          )}
+
           <div className={styles.inputFlex}>
             <input
               placeholder="0"
@@ -453,8 +485,9 @@ function Swap() {
               <DownOutlined rev={undefined} />
             </div>
           </div>
-        </div> */}
-        <div className="text-gray-400 text-xs">
+        </div>
+
+        <div className={styles.lableStyle}>
           <div className="font-bold">Current Exchange Rates:</div>
           <div className="pl-2">
             1 {tokenOne.ticker} ={" "}
@@ -465,7 +498,7 @@ function Swap() {
               {prices.toFixed(5)} {tokenTwo.ticker}
             </a>
           </div>
-          <div className="pl-2">
+          {/* <div className="pl-2">
             1 {tokenTwo.ticker} ={" "}
             <a
               className="underline text-blue-400 hover:cursor-pointer"
@@ -473,10 +506,10 @@ function Swap() {
             >
               {(1 / prices).toFixed()} {tokenOne.ticker}
             </a>
-          </div>
-          {/* <div className="pl-2">
-            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
           </div> */}
+          <div className="pl-2">
+            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
+          </div>
           {/* <div className="pl-2">
             Buy at 1 {tokenOne.ticker} = {tokenTwoLimitPrice} {tokenTwo.ticker}
           </div>
@@ -485,26 +518,35 @@ function Swap() {
           </div> */}
         </div>
 
-        <Divider style={{ borderColor: "grey", borderWidth: "0.5" }}>
-          <div className="text-sm text-gray-200">You want to buy it at</div>
-        </Divider>
-        <div className="flex flex-row items-center">
-          1 {tokenOne.ticker} =
-          <div className={styles.inputTileSmall}>
-            <div className={styles.inputFlex}>
-              <input
-                placeholder="0"
-                className={styles.inputFiledSmall}
-                value={tokenTwoLimitPrice?.toString()}
-                onChange={e => {
-                  setTokenTwoLimitPrice(e.target.value);
-                }}
-                // disabled={!prices}
-              />
+        {orderType != OrderTypes.MarketOrder ? (
+          <>
+            <Divider style={{ borderColor: "grey", borderWidth: "0.5" }}>
+              <div className="text-sm text-gray-200">
+                You want to {orderType == OrderTypes.LimitOrder ? "buy it" : "sell it"} at
+              </div>
+            </Divider>
+
+            <div className="flex flex-row items-center">
+              1 {tokenOne.ticker} {orderType == OrderTypes.LimitOrder ? ">=" : "<="}
+              <div className={styles.inputTileSmall}>
+                <div className={styles.inputFlex}>
+                  <input
+                    placeholder="0"
+                    className={styles.inputFiledSmall}
+                    value={tokenTwoLimitPrice?.toString()}
+                    onChange={e => {
+                      setTokenTwoLimitPrice(e.target.value);
+                    }}
+                    // disabled={!prices}
+                  />
+                </div>
+              </div>
+              {tokenTwo.ticker}
             </div>
-          </div>
-          {tokenTwo.ticker}
-        </div>
+          </>
+        ) : (
+          <></>
+        )}
 
         <button className={getSwapBtnClassName()} onClick={executeSwap}>
           {address == null ? "Connect Wallet" : "Swap"}
@@ -518,7 +560,7 @@ function Swap() {
         </div>
 
         {userOperationsLoading ? (
-          <div className="text-gray-400 text-xs">Loading...</div>
+          <div className={styles.lableStyle}>Loading...</div>
         ) : (
           <>
             {userOperations && userOperations.length > 0 ? (
@@ -566,23 +608,23 @@ function Swap() {
                     </div>
                     {/* <div className="flex">
                       <div>
-                        <div className="text-gray-400 text-xs">
+                        <div className={styles.lableStyle}>
                           Swap -{" "}
                           {}
                         </div>
-                        <div className="text-gray-400 text-xs">
+                        <div className={styles.lableStyle}>
                           Limit Order Price For Token 2 -{" "}
                           {formatUnits(userOp.swapParams.args[1].toString(), _tokenTwo?.decimals || 18).toString()}
                         </div>
                       </div>
 
                       <div className="flex">
-                        <div className="text-gray-400 text-xs">
+                        <div className={styles.lableStyle}>
                           <img src={_tokenOne?.img} alt="assetOneLogo" className="h-5 ml-2" />
                           {_tokenOne?.ticker}
                         </div>
                         {"  => "}
-                        <div className="text-gray-400 text-xs">
+                        <div className={styles.lableStyle}>
                           <img src={_tokenTwo?.img} alt="assetOneLogo" className="h-5 ml-2" />
                           {_tokenTwo?.ticker}
                         </div>
@@ -599,7 +641,7 @@ function Swap() {
                 );
               })
             ) : (
-              <div className="text-gray-400 text-xs">No user Operations</div>
+              <div className={styles.lableStyle}>No user Operations</div>
             )}
           </>
         )}
