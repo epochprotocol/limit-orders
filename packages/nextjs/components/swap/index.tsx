@@ -3,7 +3,7 @@ import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
-import { Divider, Modal, Popover, Radio, Select, message } from "antd";
+import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -30,7 +30,7 @@ function Swap() {
   const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
   const FACTORY_ADDRESS = "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1";
 
-  const [messageApi, contextHolder] = message.useMessage();
+  const [notificationApi, contextHolder] = notification.useNotification();
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
   const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
@@ -270,17 +270,34 @@ function Swap() {
         // const userOpHashToken2 = await bundler.sendUserOpToBundler(opToken2Approve);
         // console.log("userOpHashToken2: ", userOpHashToken2);
 
-        const data = encodeFunctionData({
-          abi: uniswapRouter02?.abi as unknown as any,
-          args: [
-            parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
-            parseUnits(tokenTwoLimitAmount.toString(), tokenTwo.decimals),
-            [tokenOne.address, tokenTwo.address],
-            address,
-            BigInt(new Date().valueOf() + 3600 * 24 * 120),
-          ],
-          functionName: "swapExactTokensForTokens",
-        });
+        let data;
+        if (orderType === OrderTypes.StopMarketOrder) {
+          const amountOut = Number(tokenTwoLimitAmount) - (Number(tokenTwoLimitAmount) * slippage) / 100;
+          data = encodeFunctionData({
+            abi: uniswapRouter02?.abi as unknown as any,
+            args: [
+              parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
+              parseUnits(amountOut.toString(), tokenTwo.decimals),
+              [tokenOne.address, tokenTwo.address],
+              address,
+              BigInt(new Date().valueOf() + 3600 * 24 * 120),
+            ],
+            functionName: "swapExactTokensForTokens",
+          });
+        } else {
+          data = encodeFunctionData({
+            abi: uniswapRouter02?.abi as unknown as any,
+            args: [
+              parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
+              parseUnits(tokenTwoLimitAmount.toString(), tokenTwo.decimals),
+              [tokenOne.address, tokenTwo.address],
+              address,
+              BigInt(new Date().valueOf() + 3600 * 24 * 120),
+            ],
+            functionName: "swapExactTokensForTokens",
+          });
+        }
+
         // console.log("data: ", data);
 
         const poolData = await uniswapFactory.read.getPair([tokenOne.address, tokenTwo.address]);
@@ -457,11 +474,14 @@ function Swap() {
 
               <div className="flex grow items-center">
                 <img src={tokenTwo?.img} alt={`${tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                <div className="text-lg font-semibold">{`${tokenTwoLimitAmount} ${tokenTwo.ticker}`}</div>
+                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${
+                  tokenTwo.ticker
+                }`}</div>
               </div>
             </div>
             <div className="text-gray-400 text mt-2">
-              You are swapping {tokenOneAmount} {tokenOne?.ticker} for {tokenTwoLimitAmount} {tokenTwo?.ticker}
+              You are swapping {tokenOneAmount} {tokenOne?.ticker} for atleast{" "}
+              {parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} {tokenTwo?.ticker}
             </div>
           </div>
           <div className="font-bold">Current Exchange Rates:</div>
@@ -580,14 +600,6 @@ function Swap() {
                     className={styles.inputFiledSmall}
                     value={tokenOneLimitPrice?.toString()}
                     onChange={e => {
-                      if (Number(e.target.value) <= prices && orderType === OrderTypes.LimitOrder) {
-                        setTokenOneLimitPrice(prices.toString());
-                        return;
-                      }
-                      if (Number(e.target.value) >= prices && orderType === OrderTypes.StopMarketOrder) {
-                        setTokenOneLimitPrice(prices.toString());
-                        return;
-                      }
                       setTokenOneLimitPrice(e.target.value);
                     }}
                     // disabled={!prices}
@@ -638,7 +650,26 @@ function Swap() {
           </div> */}
         </div>
 
-        <button className={getSwapBtnClassName()} onClick={() => setIsConfirmationOpen(true)}>
+        <button
+          className={getSwapBtnClassName()}
+          onClick={() => {
+            if (Number(tokenOneLimitPrice) <= prices && orderType === OrderTypes.LimitOrder) {
+              notificationApi["error"]({
+                message: "Invalid Limit Price",
+                description: "The Limit price can't be smaller than current market price for Limit Order",
+              });
+              return;
+            }
+            if (Number(tokenOneLimitPrice) >= prices && orderType === OrderTypes.StopMarketOrder) {
+              notificationApi["error"]({
+                message: "Invalid Limit Price",
+                description: "The Stop price can't be greater than current market price for Stop Market Order",
+              });
+              return;
+            }
+            setIsConfirmationOpen(true);
+          }}
+        >
           {address == null ? "Connect Wallet" : "Swap"}
         </button>
       </div>
@@ -689,11 +720,14 @@ function Swap() {
 
                         <div className="flex grow items-center">
                           <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                          <div className="text-lg font-semibold">{`${_tokenTwoAmount} ${tokenTwo.ticker}`}</div>
+                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${
+                            tokenTwo.ticker
+                          }`}</div>
                         </div>
                       </div>
                       <div className="text-gray-400 text mt-2">
-                        You are swapping {_tokenOneAmount} {_tokenOne?.ticker} for {_tokenTwoAmount} {_tokenTwo?.ticker}
+                        You are swapping {_tokenOneAmount} {_tokenOne?.ticker} for atleast{" "}
+                        {parseFloat(Number(_tokenTwoAmount).toFixed(5))} {_tokenTwo?.ticker}
                       </div>
                     </div>
                     {/* <div className="flex">
