@@ -17,6 +17,7 @@ function Swap() {
     assetStyle:
       "absolute h-8 bg-[#3a4157] flex justify-start items-center font-bold text-base pr-2 top-[25px] right-[20px] rounded-full gap-[5px] hover:cursor-pointer",
     modalContent: "mt-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
+    confirmationModalContent: "p-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px] ",
     inputTile: "relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600",
     inputTileSmall:
       "relative bg-[#212429] m-2 p-1 py-2 rounded-xl mb-2 border-[1px] border-outlined hover:border-zinc-600",
@@ -37,7 +38,8 @@ function Swap() {
   const [tokenTwoLimitAmount, setTokenTwoLimitAmount] = useState<string>("");
   const [tokenOne, setTokenOne] = useState(tokenList[0]);
   const [tokenTwo, setTokenTwo] = useState(tokenList[1]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [changeToken, setChangeToken] = useState(1);
   const [prices, setPrices] = useState<number>(0);
   const [txDetails, setTxDetails] = useState({
@@ -151,14 +153,14 @@ function Swap() {
   async function reload() {
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
-    setIsOpen(false);
 
     setSlippage(2.5);
     setTokenOneLimitPrice("");
     setTokenTwoLimitAmount("");
     setTokenOne(tokenList[0]);
     setTokenTwo(tokenList[1]);
-    setIsOpen(false);
+    setIsTokenPickerOpen(false);
+    setIsConfirmationOpen(false);
     setChangeToken(1);
     setPrices(0);
     setTxDetails({
@@ -189,7 +191,7 @@ function Swap() {
 
   function openModal(asset: React.SetStateAction<number>) {
     setChangeToken(asset);
-    setIsOpen(true);
+    setIsTokenPickerOpen(true);
   }
 
   function modifyToken(i: number) {
@@ -201,7 +203,7 @@ function Swap() {
     } else {
       setTokenTwo(tokenList[i]);
     }
-    setIsOpen(false);
+    setIsTokenPickerOpen(false);
   }
 
   async function fetchPrices(one: string, two: string): Promise<Number> {
@@ -396,13 +398,19 @@ function Swap() {
 
   const settings = (
     <>
-      <div>Slippage Tolerance</div>
-      <div>
+      <div className="mr-2">Slippage Tolerance :</div>
+      <div className="flex-row items-center space-x-2">
         <Radio.Group value={slippage} onChange={handleSlippageChange}>
           <Radio.Button value={0.5}>0.5%</Radio.Button>
           <Radio.Button value={2.5}>2.5%</Radio.Button>
-          <Radio.Button value={5}>5.0%</Radio.Button>
         </Radio.Group>
+        <input
+          type="number"
+          value={slippage}
+          onChange={e => handleSlippageChange(e)}
+          className="w-16 h-8 rounded-lg bg-[#212429] border-2 border-gray-300 px-2 focus:outline-none focus:border-blue-500"
+        />
+        %
       </div>
     </>
   );
@@ -415,7 +423,7 @@ function Swap() {
   return (
     <>
       {contextHolder}
-      <Modal open={isOpen} footer={null} onCancel={() => setIsOpen(false)} title="Select a token">
+      <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a token">
         <div className={styles.modalContent}>
           {tokenList?.map((e, i) => {
             return (
@@ -432,6 +440,55 @@ function Swap() {
               </div>
             );
           })}
+        </div>
+      </Modal>
+      <Modal open={isConfirmationOpen} footer={null} onCancel={() => setIsConfirmationOpen(false)} title="Confirm Swap">
+        <div className={styles.confirmationModalContent}>
+          Swap information
+          <div className="flex-grow items-centre border border-[#3a4157] rounded-lg p-4 shadow-md bg-[#212429] relative">
+            <div className="flex items-centre">
+              <div className="flex grow items-center ">
+                <img src={tokenOne?.img} alt={`${tokenOne?.ticker} Logo`} className="h-6 w-6 mr-2" />
+                <div className="text-lg font-semibold">{`${tokenOneAmount} ${tokenOne?.ticker}`}</div>
+              </div>
+              <div className="text-gray-500 mx-2">
+                <ArrowSmallDownIcon className=" -rotate-90 z-10 h-8 p-1 bg-[#212429] border-4 border-zinc-900 text-zinc-300 rounded-xl cursor-pointer hover:scale-110" />
+              </div>
+
+              <div className="flex grow items-center">
+                <img src={tokenTwo?.img} alt={`${tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
+                <div className="text-lg font-semibold">{`${tokenTwoLimitAmount} ${tokenTwo.ticker}`}</div>
+              </div>
+            </div>
+            <div className="text-gray-400 text mt-2">
+              You are swapping {tokenOneAmount} {tokenOne?.ticker} for {tokenTwoLimitAmount} {tokenTwo?.ticker}
+            </div>
+          </div>
+          <div className="font-bold">Current Exchange Rates:</div>
+          <div className="pl-2">
+            1 {tokenOne.ticker} ={" "}
+            <a
+              className="underline text-blue-400 hover:cursor-pointer"
+              onClick={() => setTokenOneLimitPrice(prices.toString())}
+            >
+              {prices.toFixed(5)} {tokenTwo.ticker}
+            </a>
+          </div>
+          <div className="pl-2">
+            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
+          </div>
+          <div className="font-bold">Limit Exchange Rates:</div>
+          <div className="pl-2">
+            1 {tokenOne.ticker} ={tokenOneLimitPrice} {tokenTwo.ticker}
+          </div>
+          <div className="pl-2">
+            {tokenOneAmount == "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoLimitAmount} {tokenTwo.ticker}
+          </div>
+          <div className="font-bold">Slippage:</div>
+          <div className="pl-2">{slippage}</div>
+          <button className={getSwapBtnClassName()} onClick={executeSwap}>
+            {address == null ? "Connect Wallet" : "Swap"}
+          </button>
         </div>
       </Modal>
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
@@ -539,18 +596,13 @@ function Swap() {
               </div>
               {tokenTwo.ticker}
             </div>
-
-            <div className="flex flex-row items-center">
-              <div>Slippage Tolerance</div>
-              <div>
-                <Radio.Group value={slippage} onChange={handleSlippageChange}>
-                  <Radio.Button value={0.5}>0.5%</Radio.Button>
-                  <Radio.Button value={2.5}>2.5%</Radio.Button>
-                  <Radio.Button value={5}>5.0%</Radio.Button>
-                </Radio.Group>
-              </div>
-            </div>
           </>
+        ) : (
+          <></>
+        )}
+
+        {orderType === OrderTypes.StopMarketOrder ? (
+          <div className="flex flex-row items-center">{settings}</div>
         ) : (
           <></>
         )}
@@ -586,8 +638,8 @@ function Swap() {
           </div> */}
         </div>
 
-        <button className={getSwapBtnClassName()} onClick={executeSwap}>
-          {address === null ? "Connect Wallet" : "Swap"}
+        <button className={getSwapBtnClassName()} onClick={() => setIsConfirmationOpen(true)}>
+          {address == null ? "Connect Wallet" : "Swap"}
         </button>
       </div>
 

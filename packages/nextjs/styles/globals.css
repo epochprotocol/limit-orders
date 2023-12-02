@@ -387,6 +387,7 @@ code {
   border: 1px solid #363e54;
   width: 400px !important;
   border-radius: 10px;
+  padding: 0;
 }
 
 .ant-modal-header {
