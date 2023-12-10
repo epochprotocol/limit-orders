@@ -3,7 +3,7 @@ import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
-import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
+import { Divider, Modal, Popover, Radio, Row, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -11,6 +11,7 @@ import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
+import { LoaderIcon } from "react-hot-toast";
 
 function Swap() {
   const styles = {
@@ -41,6 +42,8 @@ function Swap() {
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [changeToken, setChangeToken] = useState(1);
+  const [swapping, setSwapping] = useState(false);
+
   const [prices, setPrices] = useState<number>(0);
   const [txDetails, setTxDetails] = useState({
     to: null,
@@ -244,6 +247,7 @@ function Swap() {
         walletAPI &&
         bundler
       ) {
+        setSwapping(true);
         // const dataToken1Approve = encodeFunctionData({
         //   abi: token1?.abi as unknown as any,
         //   args: [uniswapRouter02?.address, BigInt(tokenOneAmount) * 10n ** 18n],
@@ -298,7 +302,7 @@ function Swap() {
           });
         }
 
-        // console.log("data: ", data);
+        console.log("data: ", data);
 
         const poolData = await uniswapFactory.read.getPair([tokenOne.address, tokenTwo.address]);
         console.log("poolData: ", poolData);
@@ -400,9 +404,13 @@ function Swap() {
         const txid = await walletAPI.getUserOpReceipt(userOpHash);
         console.log("reqId", userOpHash, "txid=", txid);
       }
+
     } catch (error) {
       console.log("error: ", error);
     }
+    setSwapping(false);
+    setIsConfirmationOpen(false);
+
   };
 
   const deleteOrder = async (userOp: any) => {
@@ -474,9 +482,8 @@ function Swap() {
 
               <div className="flex grow items-center">
                 <img src={tokenTwo?.img} alt={`${tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${
-                  tokenTwo.ticker
-                }`}</div>
+                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${tokenTwo.ticker
+                  }`}</div>
               </div>
             </div>
             <div className="text-gray-400 text mt-2">
@@ -507,10 +514,10 @@ function Swap() {
           <div className="font-bold">Slippage:</div>
           <div className="pl-2">{slippage}</div>
           <button className={getSwapBtnClassName()} onClick={executeSwap}>
-            {address == null ? "Connect Wallet" : "Swap"}
+            {swapping ? <div className="flex justify-center items-center"><LoaderIcon className="p-2 w-full align-center"></LoaderIcon> </div> : address == null ? "Connect Wallet" : "Swap"}
           </button>
-        </div>
-      </Modal>
+        </div >
+      </Modal >
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
           <Select
@@ -541,7 +548,7 @@ function Swap() {
                 onChange={e => {
                   setTokenOneAmount(e.target.value);
                 }}
-                // disabled={!prices}
+              // disabled={!prices}
               />
             </div>
             <div className={styles.assetStyle} onClick={() => openModal(1)}>
@@ -602,7 +609,7 @@ function Swap() {
                     onChange={e => {
                       setTokenOneLimitPrice(e.target.value);
                     }}
-                    // disabled={!prices}
+                  // disabled={!prices}
                   />
                 </div>
               </div>
@@ -720,9 +727,8 @@ function Swap() {
 
                         <div className="flex grow items-center">
                           <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${
-                            tokenTwo.ticker
-                          }`}</div>
+                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${tokenTwo.ticker
+                            }`}</div>
                         </div>
                       </div>
                       <div className="text-gray-400 text mt-2">
@@ -783,7 +789,7 @@ function Swap() {
   );
 
   function getSwapBtnClassName() {
-    let className = "p-4 w-full my-2 rounded-xl";
+    let className = "p-4 wa w-full my-2 content-around rounded-xl";
     className +=
       address === null || tokenOneAmount === "0" ? " text-zinc-400 bg-zinc-800 pointer-events-none" : " bg-blue-700";
     className += needToIncreaseAllowance ? " bg-yellow-600" : "";
