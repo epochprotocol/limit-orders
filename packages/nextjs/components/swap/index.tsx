@@ -3,15 +3,15 @@ import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
-import { Divider, Modal, Popover, Radio, Row, Select, notification } from "antd";
+import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
+import { LoaderIcon } from "react-hot-toast";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
-import { LoaderIcon } from "react-hot-toast";
 
 function Swap() {
   const styles = {
@@ -61,12 +61,23 @@ function Swap() {
     MarketOrder,
     StopMarketOrder,
   }
+  enum ExchangeTypes {
+    Uniswap,
+    SushiSwap,
+    QuickSwap,
+  }
   const orderTypes: Map<OrderTypes, string> = new Map([
     [OrderTypes.LimitOrder, "Limit Order"],
     [OrderTypes.MarketOrder, "Market Order"],
     [OrderTypes.StopMarketOrder, "Stop-Market Order"],
   ]);
+  const exchangeTypes: Map<ExchangeTypes, string> = new Map([
+    [ExchangeTypes.Uniswap, "Uniswap"],
+    [ExchangeTypes.SushiSwap, "SushiSwap"],
+    [ExchangeTypes.QuickSwap, "QuickSwap"],
+  ]);
   const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
+  const [exchangeType, setExchangeType] = useState<ExchangeTypes>(ExchangeTypes.Uniswap!);
   // console.log("userSCWalletAddress: ", userSCWalletAddress);
 
   const provider = useEthersProvider();
@@ -404,13 +415,11 @@ function Swap() {
         const txid = await walletAPI.getUserOpReceipt(userOpHash);
         console.log("reqId", userOpHash, "txid=", txid);
       }
-
     } catch (error) {
       console.log("error: ", error);
     }
     setSwapping(false);
     setIsConfirmationOpen(false);
-
   };
 
   const deleteOrder = async (userOp: any) => {
@@ -482,8 +491,9 @@ function Swap() {
 
               <div className="flex grow items-center">
                 <img src={tokenTwo?.img} alt={`${tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${tokenTwo.ticker
-                  }`}</div>
+                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${
+                  tokenTwo.ticker
+                }`}</div>
               </div>
             </div>
             <div className="text-gray-400 text mt-2">
@@ -514,21 +524,42 @@ function Swap() {
           <div className="font-bold">Slippage:</div>
           <div className="pl-2">{slippage}</div>
           <button className={getSwapBtnClassName()} onClick={executeSwap}>
-            {swapping ? <div className="flex justify-center items-center"><LoaderIcon className="p-2 w-full align-center"></LoaderIcon> </div> : address == null ? "Connect Wallet" : "Swap"}
+            {swapping ? (
+              <div className="flex justify-center items-center">
+                <LoaderIcon className="p-2 w-full align-center"></LoaderIcon>{" "}
+              </div>
+            ) : address == null ? (
+              "Connect Wallet"
+            ) : (
+              "Swap"
+            )}
           </button>
-        </div >
-      </Modal >
+        </div>
+      </Modal>
+
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
-          <Select
-            defaultValue={orderType}
-            onChange={setOrderType}
-            popupMatchSelectWidth={false}
-            options={Array.from(orderTypes.entries()).map(([key, label]) => ({
-              label,
-              value: key,
-            }))}
-          />
+          <div className="flex space-x-2">
+            <Select
+              defaultValue={exchangeType}
+              onChange={setExchangeType}
+              popupMatchSelectWidth={false}
+              options={Array.from(exchangeTypes.entries()).map(([key, label]) => ({
+                label,
+                value: key,
+              }))}
+              className="rounded-lg "
+            />
+            <Select
+              defaultValue={orderType}
+              onChange={setOrderType}
+              popupMatchSelectWidth={false}
+              options={Array.from(orderTypes.entries()).map(([key, label]) => ({
+                label,
+                value: key,
+              }))}
+            />
+          </div>
           <div>
             <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
               <SettingOutlined className="h-6 px-2" />
@@ -548,7 +579,7 @@ function Swap() {
                 onChange={e => {
                   setTokenOneAmount(e.target.value);
                 }}
-              // disabled={!prices}
+                // disabled={!prices}
               />
             </div>
             <div className={styles.assetStyle} onClick={() => openModal(1)}>
@@ -609,7 +640,7 @@ function Swap() {
                     onChange={e => {
                       setTokenOneLimitPrice(e.target.value);
                     }}
-                  // disabled={!prices}
+                    // disabled={!prices}
                   />
                 </div>
               </div>
@@ -727,8 +758,9 @@ function Swap() {
 
                         <div className="flex grow items-center">
                           <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${tokenTwo.ticker
-                            }`}</div>
+                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${
+                            tokenTwo.ticker
+                          }`}</div>
                         </div>
                       </div>
                       <div className="text-gray-400 text mt-2">
