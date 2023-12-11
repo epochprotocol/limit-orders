@@ -13,6 +13,8 @@ import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
+const fs = require("fs");
+
 function Swap() {
   const styles = {
     assetStyle:
@@ -61,23 +63,49 @@ function Swap() {
     MarketOrder,
     StopMarketOrder,
   }
-  enum ExchangeTypes {
-    Uniswap,
-    SushiSwap,
-    QuickSwap,
-  }
+
   const orderTypes: Map<OrderTypes, string> = new Map([
     [OrderTypes.LimitOrder, "Limit Order"],
     [OrderTypes.MarketOrder, "Market Order"],
     [OrderTypes.StopMarketOrder, "Stop-Market Order"],
   ]);
-  const exchangeTypes: Map<ExchangeTypes, string> = new Map([
-    [ExchangeTypes.Uniswap, "Uniswap"],
-    [ExchangeTypes.SushiSwap, "SushiSwap"],
-    [ExchangeTypes.QuickSwap, "QuickSwap"],
-  ]);
+
+  const [chainID, setChainID] = useState<string>("80001");
+
+  const [chainData, setChainData] = useState<ChainData | null>(null);
+  const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
+  const [routerAdd, setRouterAdd] = useState<string | null>(null);
+  const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/dexesAddresses.json");
+        const jsonData: ChainData = await response.json();
+        setChainData(jsonData);
+        // setChainID(Object.keys(jsonData[0])[0]);
+        setChainID("80001");
+        // Set the default selected exchange when data is loaded
+        const selection = Object.keys(jsonData[chainID])[0];
+        setSelectedExchange(selection);
+        setRouterAdd(jsonData[chainID][selection].UNISWAP_ROUTER02);
+        setFactoryAdd(jsonData[chainID][selection].UNISWAP_FACTORY);
+      } catch (error) {
+        console.error("Error loading JSON data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (chainData && selectedExchange) {
+      setRouterAdd(chainData[chainID][selectedExchange].UNISWAP_ROUTER02);
+      setFactoryAdd(chainData[chainID][selectedExchange].UNISWAP_FACTORY);
+    }
+  }, [selectedExchange]);
+
   const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
-  const [exchangeType, setExchangeType] = useState<ExchangeTypes>(ExchangeTypes.Uniswap!);
+
   // console.log("userSCWalletAddress: ", userSCWalletAddress);
 
   const provider = useEthersProvider();
@@ -537,17 +565,20 @@ function Swap() {
         </div>
       </Modal>
 
+      {
+        // Create options for the exchange select
+      }
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
           <div className="flex space-x-2">
             <Select
-              defaultValue={exchangeType}
-              onChange={setExchangeType}
-              popupMatchSelectWidth={false}
-              options={Array.from(exchangeTypes.entries()).map(([key, label]) => ({
+              options={Array.from(Object.keys(chainData ? chainData[80001] : []).entries()).map(([key, label]) => ({
                 label,
-                value: key,
+                value: label,
               }))}
+              value={selectedExchange}
+              onChange={setSelectedExchange}
+              popupMatchSelectWidth={false}
               className="rounded-lg "
             />
             <Select
@@ -594,7 +625,6 @@ function Swap() {
             onClick={switchTokens}
           />
         </div>
-
         <div className={styles.inputTile}>
           {orderType === OrderTypes.LimitOrder ? (
             <div className="text-xs text-gray-500 absolute top-1">You get atleast</div>
@@ -620,7 +650,6 @@ function Swap() {
             </div>
           </div>
         </div>
-
         {orderType != OrderTypes.MarketOrder ? (
           <>
             <Divider style={{ borderColor: "grey", borderWidth: "0.5" }}>
@@ -650,13 +679,11 @@ function Swap() {
         ) : (
           <></>
         )}
-
         {orderType === OrderTypes.StopMarketOrder ? (
           <div className="flex flex-row items-center">{settings}</div>
         ) : (
           <></>
         )}
-
         <div className={styles.lableStyle}>
           <div className="font-bold">Current Exchange Rates:</div>
           <div className="pl-2">
@@ -687,7 +714,6 @@ function Swap() {
             Buy at {tokenOneAmount} {tokenOne.ticker} = {tokenTwoLimitAmount} {tokenTwo.ticker}
           </div> */}
         </div>
-
         <button
           className={getSwapBtnClassName()}
           onClick={() => {

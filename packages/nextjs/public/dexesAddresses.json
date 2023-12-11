@@ -1,0 +1,41 @@
+{
+    "80001": {
+      "Uniswap": {
+        "UNISWAP_ROUTER02": "0xb8133b373b0122fCe295B9BC436d24216562C053",
+        "UNISWAP_FACTORY": "0xB601CFD4c064c56636D86C2751B7a5Cb15F2B089"
+      },
+      "SushiSwap": {
+        "UNISWAP_ROUTER02": "0xdead",
+        "UNISWAP_FACTORY": "0xdead"
+      },
+      "QuickSwap": {
+        "UNISWAP_ROUTER02": "0xdead",
+        "UNISWAP_FACTORY": "0xdead"
+      }
+    },
+    "1": {
+      "Uniswap": {
+        "UNISWAP_ROUTER02": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+        "UNISWAP_FACTORY": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+      },
+      "SushiSwap": {
+        "UNISWAP_ROUTER02": "0xdead",
+        "UNISWAP_FACTORY": "0xdead"
+      },
+      "QuickSwap": {
+        "UNISWAP_ROUTER02": "0xdead",
+        "UNISWAP_FACTORY": "0xdead"
+      }
+    },
+    "137": {
+      "SushiSwap": {
+        "UNISWAP_ROUTER02": "0xdead",
+        "UNISWAP_FACTORY": "0xdead"
+      },
+      "QuickSwap": {
+        "UNISWAP_ROUTER02": "0xdead",
+        "UNISWAP_FACTORY": "0xdead"
+      }
+    }
+}
+  
