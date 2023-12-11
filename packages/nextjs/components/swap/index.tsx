@@ -132,7 +132,7 @@ function Swap() {
     walletClient,
   });
 
-  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://0.0.0.0:14337/80001";
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "https://bundlr.epochprotocol.xyz/80001";
 
   useEffect(() => {
     (async () => {
