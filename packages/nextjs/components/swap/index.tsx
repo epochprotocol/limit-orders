@@ -7,13 +7,11 @@ import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
 import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
-
-const fs = require("fs");
 
 function Swap() {
   const styles = {
@@ -52,7 +50,7 @@ function Swap() {
     data: null,
     value: null,
   });
-  const publicClient = usePublicClient();
+  console.log("txDetails: ", txDetails);
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
   const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
@@ -75,7 +73,9 @@ function Swap() {
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
+  console.log("routerAdd: ", routerAdd);
   const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
+  console.log("factoryAdd: ", factoryAdd);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -248,7 +248,7 @@ function Swap() {
     setIsTokenPickerOpen(false);
   }
 
-  async function fetchPrices(one: string, two: string): Promise<Number> {
+  async function fetchPrices(one: string, two: string): Promise<number> {
     // console.log(parseEther(tokenOneAmount.toString()));
     // console.log("publicClient: ", publicClient);
 
@@ -575,6 +575,7 @@ function Swap() {
               options={Array.from(Object.keys(chainData ? chainData[80001] : []).entries()).map(([key, label]) => ({
                 label,
                 value: label,
+                key,
               }))}
               value={selectedExchange}
               onChange={setSelectedExchange}
