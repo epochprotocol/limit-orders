@@ -11,9 +11,9 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
  * } as const;
  */
 const externalContracts = {
-  80001: {
+  137: {
     UNISWAP_ROUTER02: {
-      address: "0xb8133b373b0122fCe295B9BC436d24216562C053",
+      address: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
       abi: [
         {
           inputs: [
@@ -356,7 +356,7 @@ const externalContracts = {
       ],
     },
     UNISWAP_FACTORY: {
-      address: "0xB601CFD4c064c56636D86C2751B7a5Cb15F2B089",
+      address: "0xc35DADB65012eC5796536bD9864eD8773aBc74C4",
       abi: [
         {
           inputs: [{ internalType: "address", name: "_feeToSetter", type: "address" }],
