@@ -6,7 +6,7 @@ import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/Advanc
 import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
-import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
+import { encodeFunctionData, formatUnits, parseEther, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
@@ -53,6 +53,7 @@ function Swap() {
     value: null,
   });
   const publicClient = usePublicClient();
+
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
   const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
@@ -70,7 +71,7 @@ function Swap() {
     [OrderTypes.StopMarketOrder, "Stop-Market Order"],
   ]);
 
-  const [chainID, setChainID] = useState<string>("80001");
+  const [chainID, setChainID] = useState<string>("137");
 
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
@@ -83,7 +84,7 @@ function Swap() {
         const jsonData: ChainData = await response.json();
         setChainData(jsonData);
         // setChainID(Object.keys(jsonData[0])[0]);
-        setChainID("80001");
+        setChainID("137");
         // Set the default selected exchange when data is loaded
         const selection = Object.keys(jsonData[chainID])[0];
         setSelectedExchange(selection);
@@ -121,14 +122,6 @@ function Swap() {
   });
   const { data: uniswapFactory } = useScaffoldContract({
     contractName: "UNISWAP_FACTORY",
-    walletClient,
-  });
-  const { data: token1 } = useScaffoldContract({
-    contractName: "TOKEN1",
-    walletClient,
-  });
-  const { data: token2 } = useScaffoldContract({
-    contractName: "TOKEN2",
     walletClient,
   });
 
@@ -250,17 +243,32 @@ function Swap() {
 
   async function fetchPrices(one: string, two: string): Promise<Number> {
     // console.log(parseEther(tokenOneAmount.toString()));
-    // console.log("publicClient: ", publicClient);
+    console.log("publicClient: ", publicClient);
+    console.log("IFcondition", uniswapRouter02);
+    console.log("IFcondition", routerAdd);
+    const args = [BigInt(parseEther("1")), [one, two]];
+    if (uniswapRouter02 && routerAdd) {
+      console.log("sending fecth");
 
-    if (uniswapRouter02 && uniswapRouter02.address) {
-      const data: any = await uniswapRouter02.read.getAmountsOut([BigInt(parseEther("1").toString()), [one, two]]);
+      // const { data, isError, isLoading } = useContractRead({
+      //   chainId: Number(chainID),
+      //   functionName: "getAmountsOut",
+      //   address: routerAdd,
+      //   abi: uniswapRouter02!.abi,
+      //   watch: true,
+      //   enabled: !Array.isArray(args) || !args.some(arg => arg === undefined),
+      // });
+      const data: any = await uniswapRouter02.read.getAmountsOut([
+        BigInt(parseUnits("1", tokenOne.decimals).toString()),
+        [one, two],
+      ]);
 
       if (data) {
-        // console.log("data: ", data);
+        console.log("data: ", data);
 
-        const price = Number(formatEther(data[1] as bigint));
+        const price = Number(formatUnits(data[1] as bigint, tokenTwo.decimals));
         // console.log("price: ", price);
-        // console.log("price have arrived", price);
+        console.log("price have arrived", price);
         setPrices(price);
         setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
         if (tokenOneLimitPrice.length === 0) {
@@ -279,8 +287,8 @@ function Swap() {
         signer &&
         provider &&
         address &&
-        token1 &&
-        token2 &&
+        tokenOne &&
+        tokenTwo &&
         uniswapRouter02 &&
         uniswapFactory &&
         walletAPI &&
@@ -347,7 +355,7 @@ function Swap() {
         console.log("poolData: ", poolData);
 
         const unsignedUserOp = await walletAPI.createUnsignedUserOp({
-          target: uniswapRouter02?.address,
+          target: routerAdd!,
           data,
           maxFeePerGas: BigNumber.from("1500000032"),
           maxPriorityFeePerGas: BigNumber.from("1500000000"),
@@ -572,7 +580,7 @@ function Swap() {
         <div className="flex items-center justify-between py-3 px-1">
           <div className="flex space-x-2">
             <Select
-              options={Array.from(Object.keys(chainData ? chainData[80001] : []).entries()).map(([key, label]) => ({
+              options={Array.from(Object.keys(chainData ? chainData[137] : []).entries()).map(([key, label]) => ({
                 label,
                 value: label,
               }))}
@@ -833,6 +841,11 @@ function Swap() {
             )}
           </>
         )}
+        <div className="flex-col">
+          <div>{chainID}</div>
+          <div>{routerAdd}</div>
+          <div> {factoryAdd}</div>
+        </div>
 
         {/* <button
           className={getSwapBtnClassName()}
