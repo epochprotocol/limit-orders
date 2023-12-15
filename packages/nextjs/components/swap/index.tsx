@@ -7,11 +7,13 @@ import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
 import { encodeFunctionData, formatUnits, parseEther, parseUnits } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, useContractRead, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
+import { routerAbi } from "~~/contracts/routerAbi";
+import { factoryAbi } from "~~/contracts/factoryAbi";
 
 const fs = require("fs");
 
@@ -72,6 +74,8 @@ function Swap() {
   ]);
 
   const [chainID, setChainID] = useState<string>("137");
+  const [data, setData] = useState<any | null>(null);
+  const [poolData, setPoolData] = useState<any | null>(null);
 
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
@@ -156,6 +160,7 @@ function Swap() {
   }, [tokenOneLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
 
   const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
+
   // console.log("userOperations: ", userOperations);
 
   // const { data, sendTransaction } = useSendTransaction({
@@ -242,31 +247,52 @@ function Swap() {
   }
 
   async function fetchPrices(one: string, two: string): Promise<Number> {
+    const args: readonly [bigint, string[]] = [BigInt(parseEther("1")), [tokenOne.address, tokenTwo.address]];
+
+    const amountsData = useContractRead({
+      chainId: Number(chainID),
+      functionName: "getAmountsOut",
+      address: routerAdd!,
+      abi: routerAbi,
+      watch: true,
+      args,
+      enabled: !Array.isArray(args) || !args.some(arg => arg === undefined),
+    });
+    if (data !== amountsData.data)
+      setData(data);
+
+
+
+    const _poolData = useContractRead({
+      chainId: Number(chainID),
+      functionName: "getAmountsOut",
+      address: routerAdd!,
+      abi: factoryAbi,
+      watch: true,
+      args: [tokenOne.address, tokenTwo.address],
+      enabled: !Array.isArray(args) || !args.some(arg => arg === undefined),
+    });
+    if (poolData !== _poolData.data) {
+      setPoolData(poolData);
+
+    }
     // console.log(parseEther(tokenOneAmount.toString()));
     console.log("publicClient: ", publicClient);
     console.log("IFcondition", uniswapRouter02);
     console.log("IFcondition", routerAdd);
-    const args = [BigInt(parseEther("1")), [one, two]];
     if (uniswapRouter02 && routerAdd) {
       console.log("sending fecth");
 
-      // const { data, isError, isLoading } = useContractRead({
-      //   chainId: Number(chainID),
-      //   functionName: "getAmountsOut",
-      //   address: routerAdd,
-      //   abi: uniswapRouter02!.abi,
-      //   watch: true,
-      //   enabled: !Array.isArray(args) || !args.some(arg => arg === undefined),
-      // });
-      const data: any = await uniswapRouter02.read.getAmountsOut([
-        BigInt(parseUnits("1", tokenOne.decimals).toString()),
-        [one, two],
-      ]);
+
+      // const data: any = await uniswapRouter02.read.getAmountsOut([
+      //   BigInt(parseUnits("1", tokenOne.decimals).toString()),
+      //   [one, two],
+      // ]);
 
       if (data) {
         console.log("data: ", data);
 
-        const price = Number(formatUnits(data[1] as bigint, tokenTwo.decimals));
+        const price = Number(formatUnits((data as Array<bigint>)[1], tokenTwo.decimals));
         // console.log("price: ", price);
         console.log("price have arrived", price);
         setPrices(price);
@@ -351,8 +377,8 @@ function Swap() {
 
         console.log("data: ", data);
 
-        const poolData = await uniswapFactory.read.getPair([tokenOne.address, tokenTwo.address]);
-        console.log("poolData: ", poolData);
+        // const poolData = await uniswapFactory.read.getPair([tokenOne.address, tokenTwo.address]);
+        // console.log("poolData: ", poolData);
 
         const unsignedUserOp = await walletAPI.createUnsignedUserOp({
           target: routerAdd!,
@@ -436,7 +462,7 @@ function Swap() {
             ...signedUserOp,
             advancedUserOperation: {
               triggerEvent: {
-                contractAddress: poolData as string,
+                contractAddress: poolData.data as string,
                 eventSignature: "event Sync(uint112 reserve0, uint112 reserve1);",
                 evaluationStatement,
               },
@@ -464,7 +490,7 @@ function Swap() {
 
   useEffect(() => {
     if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
-  }, [tokenOne, tokenTwo, tokenOneAmount]);
+  }, [tokenOne, tokenTwo, tokenOneAmount, data, poolData]);
 
   const settings = (
     <>
@@ -527,9 +553,8 @@ function Swap() {
 
               <div className="flex grow items-center">
                 <img src={tokenTwo?.img} alt={`${tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${
-                  tokenTwo.ticker
-                }`}</div>
+                <div className="text-lg font-semibold">{`${parseFloat(Number(tokenTwoLimitAmount).toFixed(5))} ${tokenTwo.ticker
+                  }`}</div>
               </div>
             </div>
             <div className="text-gray-400 text mt-2">
@@ -618,7 +643,7 @@ function Swap() {
                 onChange={e => {
                   setTokenOneAmount(e.target.value);
                 }}
-                // disabled={!prices}
+              // disabled={!prices}
               />
             </div>
             <div className={styles.assetStyle} onClick={() => openModal(1)}>
@@ -677,7 +702,7 @@ function Swap() {
                     onChange={e => {
                       setTokenOneLimitPrice(e.target.value);
                     }}
-                    // disabled={!prices}
+                  // disabled={!prices}
                   />
                 </div>
               </div>
@@ -792,9 +817,8 @@ function Swap() {
 
                         <div className="flex grow items-center">
                           <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
-                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${
-                            tokenTwo.ticker
-                          }`}</div>
+                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${tokenTwo.ticker
+                            }`}</div>
                         </div>
                       </div>
                       <div className="text-gray-400 text mt-2">
