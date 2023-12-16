@@ -19,7 +19,7 @@ function Swap() {
   const styles = {
     assetStyle:
       "absolute h-8 bg-[#3a4157] flex justify-start items-center font-bold text-base pr-2 top-[25px] right-[20px] rounded-full gap-[5px] hover:cursor-pointer",
-    modalContent: "mt-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
+    modalContent: "mt-5 mb-2 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
     confirmationModalContent: "p-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px] ",
     inputTile: "relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600",
     inputTileSmall:
@@ -39,8 +39,8 @@ function Swap() {
   const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
   const [tokenOneLimitPrice, setTokenOneLimitPrice] = useState<string>("");
   const [tokenTwoLimitAmount, setTokenTwoLimitAmount] = useState<string>("");
-  const [tokenOne, setTokenOne] = useState(tokenList[0]);
-  const [tokenTwo, setTokenTwo] = useState(tokenList[1]);
+  const [tokenOne, setTokenOne] = useState(tokenList[0]["tokenOne"]);
+  const [tokenTwo, setTokenTwo] = useState(tokenList[0]["tokenTwo"]);
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [changeToken, setChangeToken] = useState(1);
@@ -192,8 +192,8 @@ function Swap() {
     setSlippage(2.5);
     setTokenOneLimitPrice("");
     setTokenTwoLimitAmount("");
-    setTokenOne(tokenList[0]);
-    setTokenTwo(tokenList[1]);
+    setTokenOne(tokenList[0]["tokenOne"]);
+    setTokenTwo(tokenList[0]["tokenTwo"]);
     setIsTokenPickerOpen(false);
     setIsConfirmationOpen(false);
     setChangeToken(1);
@@ -234,9 +234,9 @@ function Swap() {
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
     if (changeToken === 1) {
-      setTokenOne(tokenList[i]);
+      setTokenOne(tokenList[i]["tokenOne"]);
     } else {
-      setTokenTwo(tokenList[i]);
+      setTokenTwo(tokenList[i]["tokenTwo"]);
     }
     setIsTokenPickerOpen(false);
   }
@@ -493,19 +493,25 @@ function Swap() {
   return (
     <>
       {contextHolder}
-      <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a token">
+      <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a pair">
         <div className={styles.modalContent}>
           {tokenList?.map((e, i) => {
             return (
               <div
-                className="flex justify-start items-center pl-5 pt-2 pb-2 hover:cursor-pointer hover:bg-gray-800"
+                className="flex justify-start items-center pl-5 pt-2 pb-2 mx-2 hover:cursor-pointer hover:bg-gray-800 border-[1px] border-gray-800 rounded-lg"
                 key={i}
                 onClick={() => modifyToken(i)}
               >
-                <img src={e.img} alt={e.ticker} className="h-10 w-10" />
+                <img src={e.tokenOne.img} alt={e.tokenOne.ticker} className="h-10 w-10" />
                 <div className="tokenChoiceNames">
-                  <div className="ml-2 text-base font-medium">{e.name}</div>
-                  <div className="ml-2 text-xs font-light text-gray-500">{e.ticker}</div>
+                  <div className="ml-2 text-base font-medium">{e.tokenOne.name}</div>
+                  <div className="ml-2 text-xs font-light text-gray-500">{e.tokenOne.ticker}</div>
+                </div>
+                <ArrowSmallDownIcon className="rotate-[-90deg] h-10 px-4 py-2 text-zinc-300 rounded-xl " />
+                <img src={e.tokenTwo.img} alt={e.tokenTwo.ticker} className="h-10 w-10" />
+                <div className="tokenChoiceNames">
+                  <div className="ml-2 text-base font-medium">{e.tokenTwo.name}</div>
+                  <div className="ml-2 text-xs font-light text-gray-500">{e.tokenTwo.ticker}</div>
                 </div>
               </div>
             );
@@ -758,8 +764,52 @@ function Swap() {
           <>
             {userOperations && userOperations.length > 0 ? (
               userOperations.map(userOp => {
-                const _tokenOne = tokenList.find(token => token.address === userOp.swapParams.args[2][0]);
-                const _tokenTwo = tokenList.find(token => token.address === userOp.swapParams.args[2][1]);
+                const _tokenOneAddress = userOp.swapParams.args[2][0];
+                const _tokenTwoAddress = userOp.swapParams.args[2][1];
+
+                // Find _tokenOne and _tokenTwo in the tokenList based on their addresses
+                var _tokenOne:
+                  | {
+                      ticker: string;
+                      img: string;
+                      name: string;
+                      address: string;
+                      decimals: number;
+                    }
+                  | any = null;
+                var _tokenTwo:
+                  | {
+                      ticker: string;
+                      img: string;
+                      name: string;
+                      address: string;
+                      decimals: number;
+                    }
+                  | any = null;
+
+                tokenList.forEach(token => {
+                  if (token.tokenOne.address === _tokenOneAddress) {
+                    _tokenOne = token.tokenOne;
+                    return;
+                  } else if (token.tokenTwo.address === _tokenOneAddress) {
+                    _tokenOne = token.tokenTwo;
+                    return;
+                  }
+                });
+                tokenList.forEach(token => {
+                  if (token.tokenOne.address === _tokenTwoAddress) {
+                    _tokenTwo = token.tokenOne;
+                    return;
+                  } else if (token.tokenTwo.address === _tokenTwoAddress) {
+                    _tokenOne = token.tokenTwo;
+                    return;
+                  }
+                });
+                // Check if _tokenOne and _tokenTwo are found in the tokenList
+                if (!_tokenOne || !_tokenTwo) {
+                  console.error("Token not found in tokenList");
+                }
+
                 const _tokenOneAmount = formatUnits(
                   userOp.swapParams.args[0].toString(),
                   _tokenOne?.decimals || 18,
@@ -841,11 +891,11 @@ function Swap() {
             )}
           </>
         )}
-        <div className="flex-col">
+        {/* <div className="flex-col">
           <div>{chainID}</div>
           <div>{routerAdd}</div>
           <div> {factoryAdd}</div>
-        </div>
+            </div>*/}
 
         {/* <button
           className={getSwapBtnClassName()}
