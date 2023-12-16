@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import tokenList from "../../components/assets/tokenList.json";
+import { useEffect, useState } from "react";
+import uniswapList from "../../components/assets/uniswapList.json";
+// import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
@@ -34,6 +35,7 @@ function Swap() {
   const FACTORY_ADDRESS = "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1";
 
   const [notificationApi, contextHolder] = notification.useNotification();
+  const [tokenList, setTokenList] = useState<TokenPair[]>(uniswapList["1"]["uniswap"]);
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
   const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
@@ -43,7 +45,7 @@ function Swap() {
   const [tokenTwo, setTokenTwo] = useState(tokenList[0]["tokenTwo"]);
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [changeToken, setChangeToken] = useState(1);
+  // const [changeToken, setChangeToken] = useState(1);
   const [swapping, setSwapping] = useState(false);
 
   const [prices, setPrices] = useState<number>(0);
@@ -71,7 +73,7 @@ function Swap() {
     [OrderTypes.StopMarketOrder, "Stop-Market Order"],
   ]);
 
-  const [chainID, setChainID] = useState<string>("137");
+  const [chainID, setChainID] = useState<string>("1");
 
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
@@ -84,12 +86,13 @@ function Swap() {
         const jsonData: ChainData = await response.json();
         setChainData(jsonData);
         // setChainID(Object.keys(jsonData[0])[0]);
-        setChainID("137");
+        setChainID("1");
         // Set the default selected exchange when data is loaded
         const selection = Object.keys(jsonData[chainID])[0];
         setSelectedExchange(selection);
         setRouterAdd(jsonData[chainID][selection].UNISWAP_ROUTER02);
         setFactoryAdd(jsonData[chainID][selection].UNISWAP_FACTORY);
+        // setTokenList(uniswapList[chainID][selection]);
       } catch (error) {
         console.error("Error loading JSON data:", error);
       }
@@ -196,7 +199,7 @@ function Swap() {
     setTokenTwo(tokenList[0]["tokenTwo"]);
     setIsTokenPickerOpen(false);
     setIsConfirmationOpen(false);
-    setChangeToken(1);
+    // setChangeToken(1);
     setPrices(0);
     setTxDetails({
       to: null,
@@ -224,8 +227,8 @@ function Swap() {
     });
   }
 
-  function openModal(asset: React.SetStateAction<number>) {
-    setChangeToken(asset);
+  function openModal() {
+    // setChangeToken();
     setIsTokenPickerOpen(true);
   }
 
@@ -233,11 +236,11 @@ function Swap() {
     setPrices(0);
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
-    if (changeToken === 1) {
-      setTokenOne(tokenList[i]["tokenOne"]);
-    } else {
-      setTokenTwo(tokenList[i]["tokenTwo"]);
-    }
+    // if (changeToken === 1) {
+    setTokenOne(tokenList[i]["tokenOne"]);
+    // } else {
+    setTokenTwo(tokenList[i]["tokenTwo"]);
+    // }
     setIsTokenPickerOpen(false);
   }
 
@@ -585,7 +588,8 @@ function Swap() {
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
           <div className="flex space-x-2">
-            <Select
+            {/* Uncomment this to change dexes */}
+            {/* <Select
               options={Array.from(Object.keys(chainData ? chainData[137] : []).entries()).map(([key, label]) => ({
                 label,
                 value: label,
@@ -594,7 +598,7 @@ function Swap() {
               onChange={setSelectedExchange}
               popupMatchSelectWidth={false}
               className="rounded-lg "
-            />
+            /> */}
             <Select
               defaultValue={orderType}
               onChange={setOrderType}
@@ -627,7 +631,7 @@ function Swap() {
                 // disabled={!prices}
               />
             </div>
-            <div className={styles.assetStyle} onClick={() => openModal(1)}>
+            <div className={styles.assetStyle} onClick={() => openModal()}>
               <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
               {tokenOne.ticker}
               <DownOutlined rev={undefined} />
@@ -657,7 +661,7 @@ function Swap() {
               defaultValue={tokenTwoLimitAmount}
               disabled={true}
             />
-            <div className={styles.assetStyle} onClick={() => openModal(2)}>
+            <div className={styles.assetStyle} onClick={() => openModal()}>
               <img src={tokenTwo.img} alt="assetTwoLogo" className="h-5 ml-2" />
               {tokenTwo.ticker}
               <DownOutlined rev={undefined} />
