@@ -10,8 +10,11 @@ import { LoaderIcon } from "react-hot-toast";
 import { encodeFunctionData, formatUnits, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
-import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import UniswapV2FactoryABI from "~~/contracts/UniswapV2FactoryABI";
+import UniswapV2Router02ABI from "~~/contracts/UniswapV2Router02ABI";
+import { useArbitaryContract } from "~~/hooks/scaffold-eth/useArbitaryContract";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 const fs = require("fs");
@@ -35,7 +38,7 @@ function Swap() {
   const FACTORY_ADDRESS = "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1";
 
   const [notificationApi, contextHolder] = notification.useNotification();
-  const [tokenList, setTokenList] = useState<TokenPair[]>(uniswapList["1"]["uniswap"]);
+  const [tokenList, setTokenList] = useState<TokenPair[]>((uniswapList as any)["1"]["Uniswap"]);
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
   const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
@@ -73,25 +76,28 @@ function Swap() {
     [OrderTypes.StopMarketOrder, "Stop-Market Order"],
   ]);
 
-  const [chainID, setChainID] = useState<string>("1");
-
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
   const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
+
+  const { targetNetwork } = useTargetNetwork();
+
   useEffect(() => {
     const fetchData = async () => {
+      const chainID = targetNetwork.id.toString();
       try {
         const response = await fetch("/dexesAddresses.json");
         const jsonData: ChainData = await response.json();
         setChainData(jsonData);
         // setChainID(Object.keys(jsonData[0])[0]);
-        setChainID("1");
         // Set the default selected exchange when data is loaded
         const selection = Object.keys(jsonData[chainID])[0];
         setSelectedExchange(selection);
         setRouterAdd(jsonData[chainID][selection].UNISWAP_ROUTER02);
         setFactoryAdd(jsonData[chainID][selection].UNISWAP_FACTORY);
+        console.log("calling fectch");
+        setTokenList((uniswapList as any)[chainID][selection] ?? []);
         // setTokenList(uniswapList[chainID][selection]);
       } catch (error) {
         console.error("Error loading JSON data:", error);
@@ -99,14 +105,26 @@ function Swap() {
     };
 
     fetchData();
-  }, []);
+  }, [targetNetwork.id]);
 
   useEffect(() => {
     if (chainData && selectedExchange) {
+      console.log("chanigng router");
+      const chainID = targetNetwork.id;
       setRouterAdd(chainData[chainID][selectedExchange].UNISWAP_ROUTER02);
       setFactoryAdd(chainData[chainID][selectedExchange].UNISWAP_FACTORY);
+      setTokenList((uniswapList as any)[chainID][selectedExchange] ?? []);
     }
   }, [selectedExchange]);
+
+  useEffect(() => {
+    setTokenOne(tokenList[0]["tokenOne"]);
+    setTokenTwo(tokenList[0]["tokenTwo"]);
+  }, [tokenList]);
+
+  useEffect(() => {
+    fetchPrices(tokenOne.address, tokenTwo.address);
+  }, [tokenOne, tokenTwo]);
 
   const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
 
@@ -119,14 +137,26 @@ function Swap() {
 
   const { data: walletClient } = useWalletClient();
 
-  const { data: uniswapRouter02 } = useScaffoldContract({
+  // const { data: uniswapRouter02 } = useScaffoldContract({
+  //   contractName: "UNISWAP_ROUTER02",
+  //   walletClient,
+  // });
+  const { data: uniswapRouter } = useArbitaryContract({
     contractName: "UNISWAP_ROUTER02",
+    contractAddress: routerAdd!,
+    abi: UniswapV2Router02ABI,
     walletClient,
   });
-  const { data: uniswapFactory } = useScaffoldContract({
+  const { data: uniswapFactory } = useArbitaryContract({
     contractName: "UNISWAP_FACTORY",
+    contractAddress: factoryAdd!,
+    abi: UniswapV2FactoryABI,
     walletClient,
   });
+  // const { data: uniswapFactory } = useScaffoldContract({
+  //   contractName: "UNISWAP_FACTORY",
+  //   walletClient,
+  // });
 
   const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://0.0.0.0:14337/80001";
 
@@ -247,10 +277,9 @@ function Swap() {
   async function fetchPrices(one: string, two: string): Promise<Number> {
     // console.log(parseEther(tokenOneAmount.toString()));
     console.log("publicClient: ", publicClient);
-    console.log("IFcondition", uniswapRouter02);
     console.log("IFcondition", routerAdd);
     const args = [BigInt(parseUnits("1", tokenOne.decimals).toString()), [one, two]];
-    if (uniswapRouter02 && routerAdd) {
+    if (uniswapRouter && routerAdd) {
       console.log("sending fecth");
 
       // const data: any = useArbitaryContractRead({
@@ -259,10 +288,7 @@ function Swap() {
       //   abi: uniswapRouter02!.abi,
       //   args,
       // });
-      const data: any = await uniswapRouter02.read.getAmountsOut([
-        BigInt(parseUnits("1", tokenOne.decimals).toString()),
-        [one, two],
-      ]);
+      const data: any = await uniswapRouter.read.getAmountsOut(args);
 
       if (data) {
         console.log("data: ", data);
@@ -290,7 +316,7 @@ function Swap() {
         address &&
         tokenOne &&
         tokenTwo &&
-        uniswapRouter02 &&
+        uniswapRouter &&
         uniswapFactory &&
         walletAPI &&
         bundler
@@ -326,7 +352,7 @@ function Swap() {
         if (orderType === OrderTypes.StopMarketOrder) {
           const amountOut = Number(tokenTwoLimitAmount) - (Number(tokenTwoLimitAmount) * slippage) / 100;
           data = encodeFunctionData({
-            abi: uniswapRouter02?.abi as unknown as any,
+            abi: uniswapRouter?.abi as unknown as any,
             args: [
               parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
               parseUnits(amountOut.toString(), tokenTwo.decimals),
@@ -338,7 +364,7 @@ function Swap() {
           });
         } else {
           data = encodeFunctionData({
-            abi: uniswapRouter02?.abi as unknown as any,
+            abi: uniswapRouter?.abi as unknown as any,
             args: [
               parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
               parseUnits(tokenTwoLimitAmount.toString(), tokenTwo.decimals),
@@ -364,7 +390,7 @@ function Swap() {
           value: 0n,
         });
         console.log("unsignedUserOp: ", unsignedUserOp);
-        console.log("uniswapRouter02: ", uniswapRouter02?.address);
+        console.log("uniswapRouter02: ", uniswapRouter?.address);
 
         // let newUserOp: any;
         // unsignedUserOp.sender = await unsignedUserOp.sender
@@ -486,10 +512,10 @@ function Swap() {
     </>
   );
 
-  //TODO fix this thing
-  if (tokenOneAmount === "") {
-    fetchPrices(tokenOne.address, tokenTwo.address);
-  }
+  // // TODO fix this thing
+  // if (tokenOneAmount === "" && tokenOneLimitPrice === "" && tokenTwoLimitAmount === "") {
+  //   fetchPrices(tokenOne.address, tokenTwo.address);
+  // }
 
   return (
     <>
@@ -587,16 +613,18 @@ function Swap() {
         <div className="flex items-center justify-between py-3 px-1">
           <div className="flex space-x-2">
             {/* Uncomment this to change dexes */}
-            {/* <Select
-              options={Array.from(Object.keys(chainData ? chainData[137] : []).entries()).map(([key, label]) => ({
-                label,
-                value: label,
-              }))}
+            <Select
+              options={Array.from(Object.keys(chainData ? chainData[targetNetwork.id] : []).entries()).map(
+                ([key, label]) => ({
+                  label,
+                  value: label,
+                }),
+              )}
               value={selectedExchange}
               onChange={setSelectedExchange}
               popupMatchSelectWidth={false}
               className="rounded-lg "
-            /> */}
+            />
             <Select
               defaultValue={orderType}
               onChange={setOrderType}
@@ -897,10 +925,10 @@ function Swap() {
           </>
         )}
         {/* <div className="flex-col">
-          <div>{chainID}</div>
+          <div>{targetNetwork.id}</div>
           <div>{routerAdd}</div>
           <div> {factoryAdd}</div>
-            </div>*/}
+        </div> */}
 
         {/* <button
           className={getSwapBtnClassName()}
