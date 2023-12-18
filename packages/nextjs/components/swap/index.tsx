@@ -274,7 +274,7 @@ function Swap() {
     setIsTokenPickerOpen(false);
   }
 
-  async function fetchPrices(one: string, two: string): Promise<Number> {
+  async function fetchPrices(one: string, two: string): Promise<number> {
     // console.log(parseEther(tokenOneAmount.toString()));
     console.log("publicClient: ", publicClient);
     console.log("IFcondition", routerAdd);
@@ -798,7 +798,7 @@ function Swap() {
                 const _tokenTwoAddress = userOp.swapParams.args[2][1];
 
                 // Find _tokenOne and _tokenTwo in the tokenList based on their addresses
-                var _tokenOne:
+                let _tokenOne:
                   | {
                       ticker: string;
                       img: string;
@@ -807,7 +807,7 @@ function Swap() {
                       decimals: number;
                     }
                   | any = null;
-                var _tokenTwo:
+                let _tokenTwo:
                   | {
                       ticker: string;
                       img: string;
