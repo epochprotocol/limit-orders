@@ -17,8 +17,6 @@ import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperat
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
-const fs = require("fs");
-
 function Swap() {
   const styles = {
     assetStyle:
@@ -391,6 +389,7 @@ function Swap() {
         });
         console.log("unsignedUserOp: ", unsignedUserOp);
         console.log("uniswapRouter02: ", uniswapRouter?.address);
+        console.log(txDetails);
 
         // let newUserOp: any;
         // unsignedUserOp.sender = await unsignedUserOp.sender
@@ -615,7 +614,7 @@ function Swap() {
             {/* Uncomment this to change dexes */}
             <Select
               options={Array.from(Object.keys(chainData ? chainData[targetNetwork.id] : []).entries()).map(
-                ([key, label]) => ({
+                ([, label]) => ({
                   label,
                   value: label,
                 }),
