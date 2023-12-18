@@ -43,6 +43,6 @@
     "@account-abstraction/utils": "^0.6.0",
     "@epoch-protocol/sdk": "0.8.7",
     "axios": "^1.6.2",
-    "viem": "^1.19.3"
+    "viem": "^1.19.9"
   }
 }

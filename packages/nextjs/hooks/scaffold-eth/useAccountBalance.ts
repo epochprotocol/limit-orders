@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTargetNetwork } from "./useTargetNetwork";
 import { Address } from "viem";
 import { useBalance } from "wagmi";
 import { useGlobalState } from "~~/services/store/store";
-import { useTargetNetwork } from "./useTargetNetwork";
 
 export function useAccountBalance(address?: Address) {
   const [isEthBalance, setIsEthBalance] = useState(true);

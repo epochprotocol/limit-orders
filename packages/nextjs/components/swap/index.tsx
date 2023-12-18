@@ -7,7 +7,7 @@ import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/Advanc
 import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
-import { encodeFunctionData, formatUnits, parseEther, parseUnits } from "viem";
+import { encodeFunctionData, formatUnits, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
@@ -249,17 +249,15 @@ function Swap() {
     console.log("publicClient: ", publicClient);
     console.log("IFcondition", uniswapRouter02);
     console.log("IFcondition", routerAdd);
-    const args = [BigInt(parseEther("1")), [one, two]];
+    const args = [BigInt(parseUnits("1", tokenOne.decimals).toString()), [one, two]];
     if (uniswapRouter02 && routerAdd) {
       console.log("sending fecth");
 
-      // const { data, isError, isLoading } = useContractRead({
-      //   chainId: Number(chainID),
+      // const data: any = useArbitaryContractRead({
       //   functionName: "getAmountsOut",
-      //   address: routerAdd,
+      //   contractAddress: routerAdd,
       //   abi: uniswapRouter02!.abi,
-      //   watch: true,
-      //   enabled: !Array.isArray(args) || !args.some(arg => arg === undefined),
+      //   args,
       // });
       const data: any = await uniswapRouter02.read.getAmountsOut([
         BigInt(parseUnits("1", tokenOne.decimals).toString()),
@@ -611,9 +609,9 @@ function Swap() {
           </div>
           <div>
             <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
-              <SettingOutlined className="h-6 px-2" />
+              <SettingOutlined className="h-6 px-2" rev={undefined} />
             </Popover>
-            <ReloadOutlined className="h-6" onClick={reload} />
+            <ReloadOutlined className="h-6" onClick={reload} rev={undefined} />
           </div>
         </div>
         <div className={styles.inputTile}>
@@ -832,7 +830,10 @@ function Swap() {
                           deleteOrder(userOp);
                         }}
                       >
-                        <CloseCircleOutlined className=" text-gray-500 hover:text-gray-500 cursor-pointer" />
+                        <CloseCircleOutlined
+                          className=" text-gray-500 hover:text-gray-500 cursor-pointer"
+                          rev={undefined}
+                        />
                       </div>
 
                       <div className="flex items-centre">

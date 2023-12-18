@@ -13,9 +13,11 @@ import {
   getParsedError,
 } from "~~/components/scaffold-eth";
 import { useTransactor } from "~~/hooks/scaffold-eth";
-import { getTargetNetwork, notification } from "~~/utils/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { notification } from "~~/utils/scaffold-eth";
 
 type WriteOnlyFunctionFormProps = {
+  abi: Abi;
   abiFunction: AbiFunction;
   onChange: () => void;
   contractAddress: Address;
@@ -23,6 +25,7 @@ type WriteOnlyFunctionFormProps = {
 };
 
 export const WriteOnlyFunctionForm = ({
+  abi,
   abiFunction,
   onChange,
   contractAddress,
@@ -32,7 +35,8 @@ export const WriteOnlyFunctionForm = ({
   const [txValue, setTxValue] = useState<string | bigint>("");
   const { chain } = useNetwork();
   const writeTxn = useTransactor();
-  const writeDisabled = !chain || chain?.id !== getTargetNetwork().id;
+  const { targetNetwork } = useTargetNetwork();
+  const writeDisabled = !chain || chain?.id !== targetNetwork.id;
 
   const {
     data: result,
@@ -41,7 +45,7 @@ export const WriteOnlyFunctionForm = ({
   } = useContractWrite({
     address: contractAddress,
     functionName: abiFunction.name,
-    abi: [abiFunction] as Abi,
+    abi: abi,
     args: getParsedContractFunctionArgs(form),
   });
 
