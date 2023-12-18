@@ -6124,6 +6124,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"culori@npm:^3":
+  version: 3.3.0
+  resolution: "culori@npm:3.3.0"
+  checksum: 7091ab572ed49222a25872a0c2c350340b96dac1c3237a7b58a93bfb02d11c64d68c585c32f91985a563b3d52402d16722e33a00087456287df28e3db5d99f13
+  languageName: node
+  linkType: hard
+
 "daisyui@npm:^3.5.1":
   version: 3.5.1
   resolution: "daisyui@npm:3.5.1"
@@ -6134,6 +6141,18 @@ __metadata:
     postcss-js: ^4
     tailwindcss: ^3
   checksum: 0f7e572b8fd4bfd5922b8ae1315734cad635383cfcd5c9f272b932012fdcffc35cdec43ebee2f69ac9166114741fe948ebfdd67d929daa198cda3e0ab00ff99e
+  languageName: node
+  linkType: hard
+
+"daisyui@npm:^4.4.19":
+  version: 4.4.20
+  resolution: "daisyui@npm:4.4.20"
+  dependencies:
+    css-selector-tokenizer: ^0.8
+    culori: ^3
+    picocolors: ^1
+    postcss-js: ^4
+  checksum: e23b545b5f3dc60b2bfc42b44996ec11f6fbf7126c90b30ba3804d25ca502d4953e6586ea45f02f31118ad91168e0f20c85169c0c02cb1ee3cd97afd518716ce
   languageName: node
   linkType: hard
 
@@ -11669,7 +11688,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"picocolors@npm:1.0.0, picocolors@npm:^1.0.0":
+"picocolors@npm:1.0.0, picocolors@npm:^1, picocolors@npm:^1.0.0":
   version: 1.0.0
   resolution: "picocolors@npm:1.0.0"
   checksum: a2e8092dd86c8396bdba9f2b5481032848525b3dc295ce9b57896f931e63fc16f79805144321f72976383fc249584672a75cc18d6777c6b757603f372f745981
@@ -13547,6 +13566,8 @@ __metadata:
     "@account-abstraction/utils": ^0.6.0
     "@epoch-protocol/sdk": 0.8.7
     axios: ^1.6.2
+    daisyui: ^4.4.19
+    ethers: ^5.7.0
     husky: ^8.0.1
     lint-staged: ^13.0.3
     viem: ^1.19.9
