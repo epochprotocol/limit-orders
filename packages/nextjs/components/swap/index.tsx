@@ -7,14 +7,12 @@ import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/Advanc
 import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
-import { encodeFunctionData, formatUnits, parseEther, parseUnits } from "viem";
+import { encodeFunctionData, formatUnits, parseUnits } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
 import { useScaffoldContract } from "~~/hooks/scaffold-eth";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
-
-const fs = require("fs");
 
 function Swap() {
   const styles = {
@@ -92,6 +90,7 @@ function Swap() {
         setSelectedExchange(selection);
         setRouterAdd(jsonData[chainID][selection].UNISWAP_ROUTER02);
         setFactoryAdd(jsonData[chainID][selection].UNISWAP_FACTORY);
+        console.log(factoryAdd, txDetails, setTokenList);
         // setTokenList(uniswapList[chainID][selection]);
       } catch (error) {
         console.error("Error loading JSON data:", error);
@@ -244,12 +243,12 @@ function Swap() {
     setIsTokenPickerOpen(false);
   }
 
-  async function fetchPrices(one: string, two: string): Promise<Number> {
+  async function fetchPrices(one: string, two: string): Promise<number> {
     // console.log(parseEther(tokenOneAmount.toString()));
     console.log("publicClient: ", publicClient);
     console.log("IFcondition", uniswapRouter02);
     console.log("IFcondition", routerAdd);
-    const args = [BigInt(parseEther("1")), [one, two]];
+    // const args = [BigInt(parseEther("1")), [one, two]];
     if (uniswapRouter02 && routerAdd) {
       console.log("sending fecth");
 
@@ -439,7 +438,7 @@ function Swap() {
             ...signedUserOp,
             advancedUserOperation: {
               triggerEvent: {
-                contractAddress: poolData as string,
+                contractAddress: poolData as unknown as string,
                 eventSignature: "event Sync(uint112 reserve0, uint112 reserve1);",
                 evaluationStatement,
               },
@@ -772,7 +771,7 @@ function Swap() {
                 const _tokenTwoAddress = userOp.swapParams.args[2][1];
 
                 // Find _tokenOne and _tokenTwo in the tokenList based on their addresses
-                var _tokenOne:
+                let _tokenOne:
                   | {
                       ticker: string;
                       img: string;
@@ -781,7 +780,7 @@ function Swap() {
                       decimals: number;
                     }
                   | any = null;
-                var _tokenTwo:
+                let _tokenTwo:
                   | {
                       ticker: string;
                       img: string;
