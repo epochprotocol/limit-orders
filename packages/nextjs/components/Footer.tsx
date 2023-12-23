@@ -1,12 +1,12 @@
-import Link from "next/link";
-import { SwitchTheme } from "./SwitchTheme";
-import { hardhat } from "viem/chains";
 import { CurrencyDollarIcon, HeartIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
+import { hardhat } from "viem/chains";
 import { Faucet } from "~~/components/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useGlobalState } from "~~/services/store/store";
+import { SwitchTheme } from "./SwitchTheme";
 
-/**
+/*
  * Site footer
  */
 export const Footer = () => {

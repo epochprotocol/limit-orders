@@ -1,8 +1,8 @@
-import React, { useCallback, useRef, useState } from "react";
+import { Bars3Icon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
+import React, { useCallback, useRef, useState } from "react";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 
