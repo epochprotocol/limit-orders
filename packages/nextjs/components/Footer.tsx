@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SwitchTheme } from "./SwitchTheme";
 import { hardhat } from "viem/chains";
 import { CurrencyDollarIcon, HeartIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Faucet } from "~~/components/scaffold-eth";
@@ -35,7 +36,7 @@ export const Footer = () => {
               </>
             )}
           </div>
-          {/* <SwitchTheme className={`pointer-events-auto ${isLocalNetwork ? "self-end md:self-auto" : ""}`} /> */}
+          <SwitchTheme className={`pointer-events-auto ${isLocalNetwork ? "self-end md:self-auto" : ""}`} />
         </div>
       </div>
 
