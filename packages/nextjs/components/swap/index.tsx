@@ -57,8 +57,8 @@ function Swap() {
     data: null,
     value: null,
   });
-  const publicClient = usePublicClient();
 
+  const publicClient = usePublicClient();
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
   const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
@@ -79,10 +79,10 @@ function Swap() {
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
+  console.log("routerAdd: ", routerAdd);
   const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
 
   const { targetNetwork } = useTargetNetwork();
-
   useEffect(() => {
     const fetchData = async () => {
       const chainID = targetNetwork.id.toString();
@@ -150,7 +150,7 @@ function Swap() {
     walletClient,
   });
 
-  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://0.0.0.0:14337/80001";
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "https://bundlr.epochprotocol.xyz/80001";
 
   useEffect(() => {
     (async () => {

@@ -14,8 +14,8 @@ type MetaHeaderProps = {
 const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/` : "/";
 
 export const MetaHeader = ({
-  title = "Epoch Protocol",
-  description = "Limit Order with Epoch Protocol",
+  title = "Dex Limit Orders",
+  description = "Limit Orders by Epoch Protocol",
   image = "thumbnail.jpg",
   twitterCard = "summary_large_image",
   children,
