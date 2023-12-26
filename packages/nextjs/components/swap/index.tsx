@@ -37,8 +37,20 @@ function Swap() {
 
   const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
   const FACTORY_ADDRESS = "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1";
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://localhost:14337/80001";
 
-  const [notificationApi, contextHolder] = notification.useNotification();
+  enum OrderTypes {
+    LimitOrder,
+    MarketOrder,
+    StopMarketOrder,
+  }
+  const orderTypes: Map<OrderTypes, string> = new Map([
+    [OrderTypes.LimitOrder, "Limit Order"],
+    [OrderTypes.MarketOrder, "Market Order"],
+    [OrderTypes.StopMarketOrder, "Stop-Market Order"],
+  ]);
+
+  // useState Hooks
   const [tokenList, setTokenList] = useState<TokenPair[]>((uniswapList as any)["1"]["Uniswap"]);
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
@@ -53,45 +65,52 @@ function Swap() {
   const [walletSetupStep1, setWalletSetupStep1] = useState(true);
   const [walletSetupStep2, setWalletSetupStep2] = useState(false);
   const [walletSetupStep3, setWalletSetupStep3] = useState(false);
-
-  // const [changeToken, setChangeToken] = useState(1);
   const [swapping, setSwapping] = useState(false);
-
   const [prices, setPrices] = useState<number>(0);
   const [txDetails, setTxDetails] = useState({
     to: null,
     data: null,
     value: null,
   });
-
-  const publicClient = usePublicClient();
-  const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
   const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
   const [bundler, setBundler] = useState<HttpRpcClient | null>(null);
   const [userSCWalletAddress, setUserSCWalletAddress] = useState<any>("");
   const [isUserWalletNotDeployed, setIsUserWalletNotDeployed] = useState<boolean>(false);
-
-  enum OrderTypes {
-    LimitOrder,
-    MarketOrder,
-    StopMarketOrder,
-  }
-
-  const orderTypes: Map<OrderTypes, string> = new Map([
-    [OrderTypes.LimitOrder, "Limit Order"],
-    [OrderTypes.MarketOrder, "Market Order"],
-    [OrderTypes.StopMarketOrder, "Stop-Market Order"],
-  ]);
-
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
-  console.log("routerAdd: ", routerAdd);
   const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
+  const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
 
+  // Other Hooks
+  const publicClient = usePublicClient();
+  const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
+  const [notificationApi, contextHolder] = notification.useNotification();
+  const provider = useEthersProvider();
+  const signer = useEthersSigner();
+  const { data: walletClient } = useWalletClient();
+  const { data: uniswapRouter } = useArbitaryContract({
+    contractName: "UNISWAP_ROUTER02",
+    contractAddress: routerAdd!,
+    abi: UniswapV2Router02ABI,
+    walletClient,
+  });
+  const { data: uniswapFactory } = useArbitaryContract({
+    contractName: "UNISWAP_FACTORY",
+    contractAddress: factoryAdd!,
+    abi: UniswapV2FactoryABI,
+    walletClient,
+  });
+  const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
+  const {
+    data: executedUserOperations,
+    refetch,
+    isLoading: executedUserOperationsLoading,
+  } = useFetchExecutedUserOperations(userSCWalletAddress, routerAdd!);
 
+  // useEffect Below
   useEffect(() => {
     const fetchData = async () => {
       const chainID = targetNetwork.id.toString();
@@ -152,32 +171,6 @@ function Swap() {
     fetchPrices(tokenOne.address, tokenTwo.address);
   }, [tokenOne, tokenTwo]);
 
-  const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
-
-  // console.log("userSCWalletAddress: ", userSCWalletAddress);
-
-  const provider = useEthersProvider();
-  // console.log("provider: ", provider);
-  const signer = useEthersSigner();
-  // console.log("signer: ", signer);
-
-  const { data: walletClient } = useWalletClient();
-
-  const { data: uniswapRouter } = useArbitaryContract({
-    contractName: "UNISWAP_ROUTER02",
-    contractAddress: routerAdd!,
-    abi: UniswapV2Router02ABI,
-    walletClient,
-  });
-  const { data: uniswapFactory } = useArbitaryContract({
-    contractName: "UNISWAP_FACTORY",
-    contractAddress: factoryAdd!,
-    abi: UniswapV2FactoryABI,
-    walletClient,
-  });
-
-  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://localhost:14337/80001";
-
   useEffect(() => {
     (async () => {
       if (signer && provider) {
@@ -212,46 +205,18 @@ function Swap() {
     setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
   }, [tokenOneLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
 
-  const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
-  const {
-    data: executedUserOperations,
-    refetch,
-    isLoading: executedUserOperationsLoading,
-  } = useFetchExecutedUserOperations(userSCWalletAddress, routerAdd!);
-  console.log("executedUserOperations: ", executedUserOperations);
-  // console.log("userOperations: ", userOperations);
-
   useEffect(() => {
     refetch();
   }, [routerAdd, userSCWalletAddress]);
 
-  // const { data, sendTransaction } = useSendTransaction({
-  // 	request: {
-  // 		from: address,
-  // 		to: String(txDetails.to),
-  // 		data: String(txDetails.data),
-  // 		value: String(txDetails.value),
-  // 	},
-  // });
+  useEffect(() => {
+    if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
+  }, [tokenOne, tokenTwo, tokenOneAmount]);
 
-  // const { isLoading, isSuccess } = useWaitForTransaction({
-  // 	hash: data?.hash,
-  // });
-
+  // Helper Functions here
   function handleSlippageChange(e: any) {
     setSlippage(e.target.value);
   }
-
-  // function changeAmount(e: any) {
-  // 	console.log("current value:", e.target.value);
-  // 	setTokenOneAmount(e.target.value);
-  // 	if (e.target.value && prices) {
-  // 		setTokenTwoAmount(Number(prices.toFixed(5)));
-  // 	} else {
-  // 		setTokenTwoAmount(0);
-  // 	}
-  // }
-
   async function reload() {
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
@@ -275,7 +240,6 @@ function Swap() {
     setBundler(null);
     setUserSCWalletAddress("");
   }
-
   async function switchTokens() {
     setPrices(0);
     setTokenOneAmount("0");
@@ -290,12 +254,9 @@ function Swap() {
       setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
     });
   }
-
   function openModal() {
-    // setChangeToken();
     setIsTokenPickerOpen(true);
   }
-
   function modifyToken(i: number) {
     setPrices(0);
     setTokenOneAmount("0");
@@ -307,7 +268,6 @@ function Swap() {
     // }
     setIsTokenPickerOpen(false);
   }
-
   async function fetchPrices(one: string, two: string): Promise<number> {
     // console.log(parseEther(tokenOneAmount.toString()));
     console.log("publicClient: ", publicClient);
@@ -341,8 +301,7 @@ function Swap() {
     }
     return 0;
   }
-
-  const walletSetupNextStep = async () => {
+  async function walletSetupNextStep() {
     if (walletAPI && uniswapRouter && bundler && provider) {
       try {
         if (walletSetupStep1) {
@@ -369,16 +328,14 @@ function Swap() {
         console.log("error: ", error);
       }
     }
-  };
-
-  const walletSetupCloseModal = () => {
+  }
+  async function walletSetupCloseModal() {
     // onClose();
     setWalletSetupStep1(true);
     setWalletSetupStep2(false);
     setWalletSetupStep3(false);
-  };
-
-  const executeSwap = async () => {
+  }
+  async function executeSwap() {
     try {
       if (
         signer &&
@@ -554,16 +511,19 @@ function Swap() {
     }
     setSwapping(false);
     setIsConfirmationOpen(false);
-  };
-
-  const deleteOrder = async (userOp: any) => {
+  }
+  async function deleteOrder(userOp: any) {
     console.log("userOp: ", userOp.userOp.nonce);
-  };
+  }
+  function getSwapBtnClassName() {
+    let className = "p-4 wa w-full my-2 content-around rounded-xl";
+    className +=
+      address === null || tokenOneAmount === "0" ? " text-zinc-400 bg-zinc-800 pointer-events-none" : " bg-blue-700";
+    className += needToIncreaseAllowance ? " bg-yellow-600" : "";
+    return className;
+  }
 
-  useEffect(() => {
-    if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
-  }, [tokenOne, tokenTwo, tokenOneAmount]);
-
+  // Other smaller components
   const settings = (
     <>
       <div className="mr-2">Slippage Tolerance :</div>
@@ -1204,14 +1164,6 @@ function Swap() {
       </div>
     </>
   );
-
-  function getSwapBtnClassName() {
-    let className = "p-4 wa w-full my-2 content-around rounded-xl";
-    className +=
-      address === null || tokenOneAmount === "0" ? " text-zinc-400 bg-zinc-800 pointer-events-none" : " bg-blue-700";
-    className += needToIncreaseAllowance ? " bg-yellow-600" : "";
-    return className;
-  }
 }
 
 export default Swap;
