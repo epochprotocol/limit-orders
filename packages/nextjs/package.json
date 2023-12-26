@@ -33,6 +33,7 @@
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.0",
+    "react-qr-code": "^2.0.12",
     "react-query": "^3.39.3",
     "use-debounce": "^8.0.4",
     "usehooks-ts": "^2.7.2",

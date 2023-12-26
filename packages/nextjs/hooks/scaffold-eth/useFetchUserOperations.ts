@@ -10,7 +10,7 @@ export const useFetchUserOperations = (userAddress: string) => {
   const [userOperations, setUserOperations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "https://bundlr.epochprotocol.xyz/80001";
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://localhost:14337/80001";
 
   const { data: walletClient } = useWalletClient();
   console.log("walletClient: ", walletClient);
@@ -89,7 +89,7 @@ export const useFetchUserOperations = (userAddress: string) => {
     };
 
     fetchData();
-  }, [userAddress]);
+  }, [userAddress, bundlerUrl, simpleAccount?.abi, uniswapRouter02?.abi]);
 
   return {
     userOperations,
