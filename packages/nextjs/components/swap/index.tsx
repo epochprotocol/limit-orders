@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import uniswapList from "../../components/assets/uniswapList.json";
 import jsonData from "../../public/dexesAddresses.json";
+import { Address } from "../scaffold-eth";
 // import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, LinkOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
@@ -56,6 +57,7 @@ function Swap() {
 
   // const [changeToken, setChangeToken] = useState(1);
   const [swapping, setSwapping] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
 
   const [prices, setPrices] = useState<number>(0);
   const [txDetails, setTxDetails] = useState({
@@ -351,12 +353,14 @@ function Swap() {
             setWalletSetupStep2(true);
           }
         } else if (walletSetupStep2) {
+          setIsDeploying(true);
           const op = await walletAPI.createSignedUserOp({
             target: userSCWalletAddress,
             data: "0x",
             value: 0n,
           });
 
+          setIsDeploying(false);
           const deployWalletUserOp = await bundler.sendUserOpToBundler(op);
           console.log("deployWalletUserOp: ", deployWalletUserOp);
 
@@ -687,14 +691,20 @@ function Swap() {
         <div className={`${isUserWalletNotDeployed ? "" : "hidden"}`}>
           <div className="">
             <div className="" onClick={walletSetupCloseModal}></div>
-            <div className="p-8 rounded shadow-lg w-full max-w-lg">
+            <Divider className="bg-white h-px my-4" />
+            <div className="pt-0 p-8 rounded shadow-lg w-full max-w-lg">
               {walletSetupStep1 && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Step 1: Send Gas to Your Wallet (Skip If already sent)</h2>
-                  <p className="mb-4">
-                    <span className="font-mono">{userSCWalletAddress}</span>
-                  </p>
-                  <QRCode value={userSCWalletAddress} className="mb-4" />
+                  <div className="justify-center ">
+                    <div className="p-2 flex items-center justify-center ">
+                      <Address address={userSCWalletAddress} />
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <QRCode value={userSCWalletAddress} className="mb-4 bg-black" />
+                    </div>
+                  </div>
                   <button
                     disabled={userSCWalletBalance === 0n ? true : false}
                     className={
@@ -711,18 +721,35 @@ function Swap() {
               {walletSetupStep2 && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Step 2: Deploy Your Wallet</h2>
-                  <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={walletSetupNextStep}>
-                    Deploy Wallet
+                  <button
+                    disabled={isDeploying}
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={walletSetupNextStep}
+                  >
+                    {isDeploying ? (
+                      <div className="flex justify-center items-center">
+                        <LoaderIcon className="p-2 w-full align-center"></LoaderIcon>{" "}
+                      </div>
+                    ) : (
+                      "Deploy Wallet"
+                    )}
                   </button>
                 </div>
               )}
               {walletSetupStep3 && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Step 3: Send Assets to Your Wallet</h2>
-                  <p className="mb-4">
-                    <span className="font-mono">{userSCWalletAddress}</span>
-                  </p>
-                  <QRCode value={userSCWalletAddress} className="mb-4" />
+
+                  <div className="justify-center ">
+                    <div className="p-2 flex items-center justify-center ">
+                      <Address address={userSCWalletAddress} />
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <QRCode value={userSCWalletAddress} className="mb-4 bg-black" />
+                    </div>
+                  </div>
+
                   <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={walletSetupCloseModal}>
                     Close
                   </button>
