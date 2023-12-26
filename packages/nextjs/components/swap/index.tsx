@@ -1,23 +1,30 @@
-import React, { useEffect, useState } from "react";
-import tokenList from "../../components/assets/tokenList.json";
-import { CloseCircleOutlined, DownOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { useEffect, useState } from "react";
+import uniswapList from "../../components/assets/uniswapList.json";
+import jsonData from "../../public/dexesAddresses.json";
+// import tokenList from "../../components/assets/tokenList.json";
+import { CloseCircleOutlined, DownOutlined, LinkOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
 import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
-import { encodeFunctionData, formatEther, formatUnits, parseEther, parseUnits } from "viem";
-import { useAccount, useWalletClient } from "wagmi";
+import QRCode from "react-qr-code";
+import { encodeFunctionData, formatUnits, parseUnits } from "viem";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { ArrowSmallDownIcon } from "@heroicons/react/24/outline";
-import { useScaffoldContract } from "~~/hooks/scaffold-eth";
+import UniswapV2FactoryABI from "~~/contracts/UniswapV2FactoryABI";
+import UniswapV2Router02ABI from "~~/contracts/UniswapV2Router02ABI";
+import { useArbitaryContract } from "~~/hooks/scaffold-eth/useArbitaryContract";
+import { useFetchExecutedUserOperations } from "~~/hooks/scaffold-eth/useFetchExecutedUserOperations";
 import { useFetchUserOperations } from "~~/hooks/scaffold-eth/useFetchUserOperations";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useEthersProvider, useEthersSigner } from "~~/utils/scaffold-eth/common";
 
 function Swap() {
   const styles = {
     assetStyle:
       "absolute h-8 bg-[#3a4157] flex justify-start items-center font-bold text-base pr-2 top-[25px] right-[20px] rounded-full gap-[5px] hover:cursor-pointer",
-    modalContent: "mt-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
+    modalContent: "mt-5 mb-2 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px]",
     confirmationModalContent: "p-5 flex flex-col border-t-1 border-solid border-[#363e54] gap-[10px] ",
     inputTile: "relative bg-[#212429] p-4 py-6 rounded-xl mb-2 border-[2px] border-transparent hover:border-zinc-600",
     inputTileSmall:
@@ -32,16 +39,22 @@ function Swap() {
   const FACTORY_ADDRESS = "0x4A4fC0bF39D191b5fcA7d4868C9F742B342a39c1";
 
   const [notificationApi, contextHolder] = notification.useNotification();
+  const [tokenList, setTokenList] = useState<TokenPair[]>((uniswapList as any)["1"]["Uniswap"]);
   const [slippage, setSlippage] = useState(2.5);
   const [tokenOneAmount, setTokenOneAmount] = useState<string>("");
   const [tokenTwoAmount, setTokenTwoAmount] = useState<string>("");
   const [tokenOneLimitPrice, setTokenOneLimitPrice] = useState<string>("");
   const [tokenTwoLimitAmount, setTokenTwoLimitAmount] = useState<string>("");
-  const [tokenOne, setTokenOne] = useState(tokenList[0]);
-  const [tokenTwo, setTokenTwo] = useState(tokenList[1]);
+  const [tokenOne, setTokenOne] = useState(tokenList[0]["tokenOne"]);
+  const [tokenTwo, setTokenTwo] = useState(tokenList[0]["tokenTwo"]);
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
+  const [userSCWalletBalance, setUserSCWalletBalance] = useState<bigint>(0n);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [changeToken, setChangeToken] = useState(1);
+  const [walletSetupStep1, setWalletSetupStep1] = useState(true);
+  const [walletSetupStep2, setWalletSetupStep2] = useState(false);
+  const [walletSetupStep3, setWalletSetupStep3] = useState(false);
+
+  // const [changeToken, setChangeToken] = useState(1);
   const [swapping, setSwapping] = useState(false);
 
   const [prices, setPrices] = useState<number>(0);
@@ -50,12 +63,15 @@ function Swap() {
     data: null,
     value: null,
   });
-  console.log("txDetails: ", txDetails);
+
+  const publicClient = usePublicClient();
   const { address } = useAccount();
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
   const [walletAPI, setWalletAPI] = useState<SimpleAccountAPI | null>(null);
   const [bundler, setBundler] = useState<HttpRpcClient | null>(null);
   const [userSCWalletAddress, setUserSCWalletAddress] = useState<any>("");
+  const [isUserWalletNotDeployed, setIsUserWalletNotDeployed] = useState<boolean>(false);
+
   enum OrderTypes {
     LimitOrder,
     MarketOrder,
@@ -68,41 +84,73 @@ function Swap() {
     [OrderTypes.StopMarketOrder, "Stop-Market Order"],
   ]);
 
-  const [chainID, setChainID] = useState<string>("80001");
-
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
   console.log("routerAdd: ", routerAdd);
   const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
-  console.log("factoryAdd: ", factoryAdd);
+
+  const { targetNetwork } = useTargetNetwork();
+
   useEffect(() => {
     const fetchData = async () => {
+      const chainID = targetNetwork.id.toString();
       try {
-        const response = await fetch("/dexesAddresses.json");
-        const jsonData: ChainData = await response.json();
-        setChainData(jsonData);
+        // const response = await fetch("/dexesAddresses.json");
+        // const jsonData: ChainData = await response.json();
+        setChainData(jsonData as ChainData);
         // setChainID(Object.keys(jsonData[0])[0]);
-        setChainID("80001");
         // Set the default selected exchange when data is loaded
-        const selection = Object.keys(jsonData[chainID])[0];
+        const selection = Object.keys((jsonData as ChainData)[chainID])[0];
         setSelectedExchange(selection);
-        setRouterAdd(jsonData[chainID][selection].UNISWAP_ROUTER02);
-        setFactoryAdd(jsonData[chainID][selection].UNISWAP_FACTORY);
+        setRouterAdd((jsonData as ChainData)[chainID][selection].UNISWAP_ROUTER02);
+        setFactoryAdd((jsonData as ChainData)[chainID][selection].UNISWAP_FACTORY);
+        console.log("calling fectch");
+        setTokenList((uniswapList as any)[chainID][selection] ?? []);
+        // setTokenList(uniswapList[chainID][selection]);
       } catch (error) {
         console.error("Error loading JSON data:", error);
       }
     };
 
     fetchData();
-  }, []);
+  }, [targetNetwork.id]);
 
   useEffect(() => {
     if (chainData && selectedExchange) {
+      console.log("chanigng router");
+      const chainID = targetNetwork.id;
       setRouterAdd(chainData[chainID][selectedExchange].UNISWAP_ROUTER02);
       setFactoryAdd(chainData[chainID][selectedExchange].UNISWAP_FACTORY);
+      setTokenList((uniswapList as any)[chainID][selectedExchange] ?? []);
     }
   }, [selectedExchange]);
+
+  useEffect(() => {
+    setTokenOne(tokenList[0]["tokenOne"]);
+    setTokenTwo(tokenList[0]["tokenTwo"]);
+  }, [tokenList]);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (userSCWalletAddress && userSCWalletAddress !== "") {
+        try {
+          console.log("userSCWalletAddress: ", userSCWalletAddress);
+          const balance = await publicClient.getBalance({ address: userSCWalletAddress });
+          console.log("userSCWalletBalance: ", userSCWalletBalance);
+          setUserSCWalletBalance(balance);
+        } catch (error) {
+          console.log("error: ", error);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [userSCWalletAddress]);
+
+  useEffect(() => {
+    fetchPrices(tokenOne.address, tokenTwo.address);
+  }, [tokenOne, tokenTwo]);
 
   const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
 
@@ -115,24 +163,20 @@ function Swap() {
 
   const { data: walletClient } = useWalletClient();
 
-  const { data: uniswapRouter02 } = useScaffoldContract({
+  const { data: uniswapRouter } = useArbitaryContract({
     contractName: "UNISWAP_ROUTER02",
+    contractAddress: routerAdd!,
+    abi: UniswapV2Router02ABI,
     walletClient,
   });
-  const { data: uniswapFactory } = useScaffoldContract({
+  const { data: uniswapFactory } = useArbitaryContract({
     contractName: "UNISWAP_FACTORY",
-    walletClient,
-  });
-  const { data: token1 } = useScaffoldContract({
-    contractName: "TOKEN1",
-    walletClient,
-  });
-  const { data: token2 } = useScaffoldContract({
-    contractName: "TOKEN2",
+    contractAddress: factoryAdd!,
+    abi: UniswapV2FactoryABI,
     walletClient,
   });
 
-  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "https://bundlr.epochprotocol.xyz/80001";
+  const bundlerUrl: string = process.env.NEXT_PUBLIC_BUNDLER_URL ?? "http://localhost:14337/80001";
 
   useEffect(() => {
     (async () => {
@@ -154,6 +198,12 @@ function Swap() {
 
         console.log("walletAPIInstance.accountAddress: ", await walletAPIInstance.getAccountAddress());
         setUserSCWalletAddress(await walletAPIInstance.getAccountAddress());
+
+        const isNotDeployed = await walletAPIInstance.checkAccountPhantom();
+        console.log("isDeployed: ", isNotDeployed);
+        if (isNotDeployed) {
+          setIsUserWalletNotDeployed(true);
+        }
       }
     })();
   }, [signer, provider]);
@@ -163,7 +213,17 @@ function Swap() {
   }, [tokenOneLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
 
   const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
+  const {
+    data: executedUserOperations,
+    refetch,
+    isLoading: executedUserOperationsLoading,
+  } = useFetchExecutedUserOperations(userSCWalletAddress, routerAdd!);
+  console.log("executedUserOperations: ", executedUserOperations);
   // console.log("userOperations: ", userOperations);
+
+  useEffect(() => {
+    refetch();
+  }, [routerAdd, userSCWalletAddress]);
 
   // const { data, sendTransaction } = useSendTransaction({
   // 	request: {
@@ -199,11 +259,11 @@ function Swap() {
     setSlippage(2.5);
     setTokenOneLimitPrice("");
     setTokenTwoLimitAmount("");
-    setTokenOne(tokenList[0]);
-    setTokenTwo(tokenList[1]);
+    setTokenOne(tokenList[0]["tokenOne"]);
+    setTokenTwo(tokenList[0]["tokenTwo"]);
     setIsTokenPickerOpen(false);
     setIsConfirmationOpen(false);
-    setChangeToken(1);
+    // setChangeToken(1);
     setPrices(0);
     setTxDetails({
       to: null,
@@ -231,8 +291,8 @@ function Swap() {
     });
   }
 
-  function openModal(asset: React.SetStateAction<number>) {
-    setChangeToken(asset);
+  function openModal() {
+    // setChangeToken();
     setIsTokenPickerOpen(true);
   }
 
@@ -240,27 +300,36 @@ function Swap() {
     setPrices(0);
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
-    if (changeToken === 1) {
-      setTokenOne(tokenList[i]);
-    } else {
-      setTokenTwo(tokenList[i]);
-    }
+    // if (changeToken === 1) {
+    setTokenOne(tokenList[i]["tokenOne"]);
+    // } else {
+    setTokenTwo(tokenList[i]["tokenTwo"]);
+    // }
     setIsTokenPickerOpen(false);
   }
 
   async function fetchPrices(one: string, two: string): Promise<number> {
     // console.log(parseEther(tokenOneAmount.toString()));
-    // console.log("publicClient: ", publicClient);
+    console.log("publicClient: ", publicClient);
+    console.log("IFcondition", routerAdd);
+    const args = [BigInt(parseUnits("1", tokenOne.decimals).toString()), [one, two]];
+    if (uniswapRouter && routerAdd) {
+      console.log("sending fecth");
 
-    if (uniswapRouter02 && uniswapRouter02.address) {
-      const data: any = await uniswapRouter02.read.getAmountsOut([BigInt(parseEther("1").toString()), [one, two]]);
+      // const data: any = useArbitaryContractRead({
+      //   functionName: "getAmountsOut",
+      //   contractAddress: routerAdd,
+      //   abi: uniswapRouter02!.abi,
+      //   args,
+      // });
+      const data: any = await uniswapRouter.read.getAmountsOut(args);
 
       if (data) {
-        // console.log("data: ", data);
+        console.log("data: ", data);
 
-        const price = Number(formatEther(data[1] as bigint));
+        const price = Number(formatUnits(data[1] as bigint, tokenTwo.decimals));
         // console.log("price: ", price);
-        // console.log("price have arrived", price);
+        console.log("price have arrived", price);
         setPrices(price);
         setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
         if (tokenOneLimitPrice.length === 0) {
@@ -273,15 +342,51 @@ function Swap() {
     return 0;
   }
 
+  const walletSetupNextStep = async () => {
+    if (walletAPI && uniswapRouter && bundler && provider) {
+      try {
+        if (walletSetupStep1) {
+          if (!(userSCWalletBalance === 0n)) {
+            setWalletSetupStep1(false);
+            setWalletSetupStep2(true);
+          }
+        } else if (walletSetupStep2) {
+          const op = await walletAPI.createSignedUserOp({
+            target: userSCWalletAddress,
+            data: "0x",
+            value: 0n,
+          });
+
+          const deployWalletUserOp = await bundler.sendUserOpToBundler(op);
+          console.log("deployWalletUserOp: ", deployWalletUserOp);
+
+          if (deployWalletUserOp) {
+            setWalletSetupStep2(false);
+            setWalletSetupStep3(true);
+          }
+        }
+      } catch (error) {
+        console.log("error: ", error);
+      }
+    }
+  };
+
+  const walletSetupCloseModal = () => {
+    // onClose();
+    setWalletSetupStep1(true);
+    setWalletSetupStep2(false);
+    setWalletSetupStep3(false);
+  };
+
   const executeSwap = async () => {
     try {
       if (
         signer &&
         provider &&
         address &&
-        token1 &&
-        token2 &&
-        uniswapRouter02 &&
+        tokenOne &&
+        tokenTwo &&
+        uniswapRouter &&
         uniswapFactory &&
         walletAPI &&
         bundler
@@ -317,7 +422,7 @@ function Swap() {
         if (orderType === OrderTypes.StopMarketOrder) {
           const amountOut = Number(tokenTwoLimitAmount) - (Number(tokenTwoLimitAmount) * slippage) / 100;
           data = encodeFunctionData({
-            abi: uniswapRouter02?.abi as unknown as any,
+            abi: uniswapRouter?.abi as unknown as any,
             args: [
               parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
               parseUnits(amountOut.toString(), tokenTwo.decimals),
@@ -329,7 +434,7 @@ function Swap() {
           });
         } else {
           data = encodeFunctionData({
-            abi: uniswapRouter02?.abi as unknown as any,
+            abi: uniswapRouter?.abi as unknown as any,
             args: [
               parseUnits(tokenOneAmount.toString(), tokenOne.decimals),
               parseUnits(tokenTwoLimitAmount.toString(), tokenTwo.decimals),
@@ -347,7 +452,7 @@ function Swap() {
         console.log("poolData: ", poolData);
 
         const unsignedUserOp = await walletAPI.createUnsignedUserOp({
-          target: uniswapRouter02?.address,
+          target: routerAdd!,
           data,
           maxFeePerGas: BigNumber.from("1500000032"),
           maxPriorityFeePerGas: BigNumber.from("1500000000"),
@@ -355,7 +460,8 @@ function Swap() {
           value: 0n,
         });
         console.log("unsignedUserOp: ", unsignedUserOp);
-        console.log("uniswapRouter02: ", uniswapRouter02?.address);
+        console.log("uniswapRouter02: ", uniswapRouter?.address);
+        console.log(txDetails);
 
         // let newUserOp: any;
         // unsignedUserOp.sender = await unsignedUserOp.sender
@@ -477,27 +583,33 @@ function Swap() {
     </>
   );
 
-  //TODO fix this thing
-  if (tokenOneAmount === "") {
-    fetchPrices(tokenOne.address, tokenTwo.address);
-  }
+  // // TODO fix this thing
+  // if (tokenOneAmount === "" && tokenOneLimitPrice === "" && tokenTwoLimitAmount === "") {
+  //   fetchPrices(tokenOne.address, tokenTwo.address);
+  // }
 
   return (
     <>
       {contextHolder}
-      <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a token">
+      <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a pair">
         <div className={styles.modalContent}>
           {tokenList?.map((e, i) => {
             return (
               <div
-                className="flex justify-start items-center pl-5 pt-2 pb-2 hover:cursor-pointer hover:bg-gray-800"
+                className="flex justify-start items-center pl-5 pt-2 pb-2 mx-2 hover:cursor-pointer hover:bg-gray-800 border-[1px] border-gray-800 rounded-lg"
                 key={i}
                 onClick={() => modifyToken(i)}
               >
-                <img src={e.img} alt={e.ticker} className="h-10 w-10" />
+                <img src={e.tokenOne.img} alt={e.tokenOne.ticker} className="h-10 w-10" />
                 <div className="tokenChoiceNames">
-                  <div className="ml-2 text-base font-medium">{e.name}</div>
-                  <div className="ml-2 text-xs font-light text-gray-500">{e.ticker}</div>
+                  <div className="ml-2 text-base font-medium">{e.tokenOne.name}</div>
+                  <div className="ml-2 text-xs font-light text-gray-500">{e.tokenOne.ticker}</div>
+                </div>
+                <ArrowSmallDownIcon className="rotate-[-90deg] h-10 px-4 py-2 text-zinc-300 rounded-xl " />
+                <img src={e.tokenTwo.img} alt={e.tokenTwo.ticker} className="h-10 w-10" />
+                <div className="tokenChoiceNames">
+                  <div className="ml-2 text-base font-medium">{e.tokenTwo.name}</div>
+                  <div className="ml-2 text-xs font-light text-gray-500">{e.tokenTwo.ticker}</div>
                 </div>
               </div>
             );
@@ -564,6 +676,62 @@ function Swap() {
           </button>
         </div>
       </Modal>
+      <Modal
+        open={isUserWalletNotDeployed}
+        footer={null}
+        onCancel={() => {
+          setIsUserWalletNotDeployed(false);
+        }}
+        title="Manage Your Wallet"
+      >
+        <div className={`${isUserWalletNotDeployed ? "" : "hidden"}`}>
+          <div className="">
+            <div className="" onClick={walletSetupCloseModal}></div>
+            <div className="p-8 rounded shadow-lg w-full max-w-lg">
+              {walletSetupStep1 && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Step 1: Send Gas to Your Wallet (Skip If already sent)</h2>
+                  <p className="mb-4">
+                    <span className="font-mono">{userSCWalletAddress}</span>
+                  </p>
+                  <QRCode value={userSCWalletAddress} className="mb-4" />
+                  <button
+                    disabled={userSCWalletBalance === 0n ? true : false}
+                    className={
+                      userSCWalletBalance === 0n
+                        ? "bg-blue-500 text-white px-4 py-2 rounded opacity-50"
+                        : "bg-blue-500 text-white px-4 py-2 rounded"
+                    }
+                    onClick={walletSetupNextStep}
+                  >
+                    {userSCWalletBalance === 0n ? "Wallet Balance is 0" : "Next"}
+                  </button>
+                </div>
+              )}
+              {walletSetupStep2 && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Step 2: Deploy Your Wallet</h2>
+                  <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={walletSetupNextStep}>
+                    Deploy Wallet
+                  </button>
+                </div>
+              )}
+              {walletSetupStep3 && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Step 3: Send Assets to Your Wallet</h2>
+                  <p className="mb-4">
+                    <span className="font-mono">{userSCWalletAddress}</span>
+                  </p>
+                  <QRCode value={userSCWalletAddress} className="mb-4" />
+                  <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={walletSetupCloseModal}>
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {
         // Create options for the exchange select
@@ -571,12 +739,14 @@ function Swap() {
       <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl">
         <div className="flex items-center justify-between py-3 px-1">
           <div className="flex space-x-2">
+            {/* Uncomment this to change dexes */}
             <Select
-              options={Array.from(Object.keys(chainData ? chainData[80001] : []).entries()).map(([key, label]) => ({
-                label,
-                value: label,
-                key,
-              }))}
+              options={Array.from(Object.keys(chainData ? chainData[targetNetwork.id] : []).entries()).map(
+                ([, label]) => ({
+                  label,
+                  value: label,
+                }),
+              )}
               value={selectedExchange}
               onChange={setSelectedExchange}
               popupMatchSelectWidth={false}
@@ -594,9 +764,9 @@ function Swap() {
           </div>
           <div>
             <Popover content={settings} title="Settings" trigger="click" placement="bottomRight">
-              <SettingOutlined className="h-6 px-2" />
+              <SettingOutlined className="h-6 px-2" rev={undefined} />
             </Popover>
-            <ReloadOutlined className="h-6" onClick={reload} />
+            <ReloadOutlined className="h-6" onClick={reload} rev={undefined} />
           </div>
         </div>
         <div className={styles.inputTile}>
@@ -614,7 +784,7 @@ function Swap() {
                 // disabled={!prices}
               />
             </div>
-            <div className={styles.assetStyle} onClick={() => openModal(1)}>
+            <div className={styles.assetStyle} onClick={() => openModal()}>
               <img src={tokenOne.img} alt="assetOneLogo" className="h-5 ml-2" />
               {tokenOne.ticker}
               <DownOutlined rev={undefined} />
@@ -644,7 +814,7 @@ function Swap() {
               defaultValue={tokenTwoLimitAmount}
               disabled={true}
             />
-            <div className={styles.assetStyle} onClick={() => openModal(2)}>
+            <div className={styles.assetStyle} onClick={() => openModal()}>
               <img src={tokenTwo.img} alt="assetTwoLogo" className="h-5 ml-2" />
               {tokenTwo.ticker}
               <DownOutlined rev={undefined} />
@@ -705,7 +875,7 @@ function Swap() {
               {(1 / prices).toFixed()} {tokenOne.ticker}
             </a>
           </div> */}
-          <div className="pl-2">
+          <div className="pl-2 flex grow">
             {tokenOneAmount === "" ? 0 : tokenOneAmount} {tokenOne.ticker} = {tokenTwoAmount} {tokenTwo.ticker}
           </div>
           {/* <div className="pl-2">
@@ -739,20 +909,64 @@ function Swap() {
         </button>
       </div>
 
-      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl w-[35%] " style={{ color: "white", marginLeft: "2rem" }}>
+      <div className="bg-zinc-900 pt-2 pb-4 px-6 rounded-xl w-[35%]" style={{ color: "white", marginLeft: "2rem" }}>
         <div className="flex items-center justify-start py-3 px-1">
-          <div>Your Orders:</div>
+          <div>Your Open Orders:</div>
           <div className="bg-[#212429] px-2 p-1 rounded-lg mx-3">{userOperations.length}</div>
         </div>
 
         {userOperationsLoading ? (
           <div className={styles.lableStyle}>Loading...</div>
         ) : (
-          <>
+          <div className="overflow-y-auto h-[30vh]">
             {userOperations && userOperations.length > 0 ? (
               userOperations.map(userOp => {
-                const _tokenOne = tokenList.find(token => token.address === userOp.swapParams.args[2][0]);
-                const _tokenTwo = tokenList.find(token => token.address === userOp.swapParams.args[2][1]);
+                const _tokenOneAddress = userOp.swapParams.args[2][0];
+                const _tokenTwoAddress = userOp.swapParams.args[2][1];
+
+                // Find _tokenOne and _tokenTwo in the tokenList based on their addresses
+                let _tokenOne:
+                  | {
+                      ticker: string;
+                      img: string;
+                      name: string;
+                      address: string;
+                      decimals: number;
+                    }
+                  | any = null;
+                let _tokenTwo:
+                  | {
+                      ticker: string;
+                      img: string;
+                      name: string;
+                      address: string;
+                      decimals: number;
+                    }
+                  | any = null;
+
+                tokenList.forEach(token => {
+                  if (token.tokenOne.address === _tokenOneAddress) {
+                    _tokenOne = token.tokenOne;
+                    return;
+                  } else if (token.tokenTwo.address === _tokenOneAddress) {
+                    _tokenOne = token.tokenTwo;
+                    return;
+                  }
+                });
+                tokenList.forEach(token => {
+                  if (token.tokenOne.address === _tokenTwoAddress) {
+                    _tokenTwo = token.tokenOne;
+                    return;
+                  } else if (token.tokenTwo.address === _tokenTwoAddress) {
+                    _tokenTwo = token.tokenTwo;
+                    return;
+                  }
+                });
+                // Check if _tokenOne and _tokenTwo are found in the tokenList
+                if (!_tokenOne || !_tokenTwo) {
+                  console.error("Token not found in tokenList");
+                }
+
                 const _tokenOneAmount = formatUnits(
                   userOp.swapParams.args[0].toString(),
                   _tokenOne?.decimals || 18,
@@ -764,14 +978,17 @@ function Swap() {
 
                 return (
                   <>
-                    <div className="flex-grow items-centre border border-[#3a4157] rounded-lg p-4 shadow-md bg-[#212429] relative">
+                    <div className="flex-grow items-centre border border-[#3a4157] rounded-lg p-4 shadow-md bg-[#212429] relative mb-2">
                       <div
                         className="absolute top-0 right-1 text-gray-300 hover:text-gray-500 cursor-pointer"
                         onClick={() => {
                           deleteOrder(userOp);
                         }}
                       >
-                        <CloseCircleOutlined className=" text-gray-500 hover:text-gray-500 cursor-pointer" />
+                        <CloseCircleOutlined
+                          className=" text-gray-500 hover:text-gray-500 cursor-pointer"
+                          rev={undefined}
+                        />
                       </div>
 
                       <div className="flex items-centre">
@@ -786,7 +1003,7 @@ function Swap() {
                         <div className="flex grow items-center">
                           <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
                           <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${
-                            tokenTwo.ticker
+                            _tokenTwo?.ticker
                           }`}</div>
                         </div>
                       </div>
@@ -832,8 +1049,13 @@ function Swap() {
             ) : (
               <div className={styles.lableStyle}>No user Operations</div>
             )}
-          </>
+          </div>
         )}
+        {/* <div className="flex-col">
+          <div>{targetNetwork.id}</div>
+          <div>{routerAdd}</div>
+          <div> {factoryAdd}</div>
+        </div> */}
 
         {/* <button
           className={getSwapBtnClassName()}
@@ -843,6 +1065,142 @@ function Swap() {
         >
           {address === null ? "Connect Wallet" : "Swap"}
         </button> */}
+        <div className="flex items-center justify-start py-3 px-1">
+          <div>Your Completed Orders:</div>
+          <div className="bg-[#212429] px-2 p-1 rounded-lg mx-3">
+            {executedUserOperations ? executedUserOperations.length : 0}
+          </div>
+        </div>
+        {executedUserOperationsLoading ? (
+          <div className={styles.lableStyle}>Loading...</div>
+        ) : (
+          <div className="overflow-y-auto h-[30vh]">
+            {executedUserOperations && executedUserOperations.length > 0 ? (
+              executedUserOperations.map(userOp => {
+                const _tokenOneAddress = userOp.swapParams.args[2][0];
+                const _tokenTwoAddress = userOp.swapParams.args[2][1];
+
+                // Find _tokenOne and _tokenTwo in the tokenList based on their addresses
+                let _tokenOne:
+                  | {
+                      ticker: string;
+                      img: string;
+                      name: string;
+                      address: string;
+                      decimals: number;
+                    }
+                  | any = null;
+                let _tokenTwo:
+                  | {
+                      ticker: string;
+                      img: string;
+                      name: string;
+                      address: string;
+                      decimals: number;
+                    }
+                  | any = null;
+
+                tokenList.forEach(token => {
+                  if (token.tokenOne.address === _tokenOneAddress) {
+                    _tokenOne = token.tokenOne;
+                    return;
+                  } else if (token.tokenTwo.address === _tokenOneAddress) {
+                    _tokenOne = token.tokenTwo;
+                    return;
+                  }
+                });
+                tokenList.forEach(token => {
+                  if (token.tokenOne.address === _tokenTwoAddress) {
+                    _tokenTwo = token.tokenOne;
+                    return;
+                  } else if (token.tokenTwo.address === _tokenTwoAddress) {
+                    _tokenTwo = token.tokenTwo;
+                    return;
+                  }
+                });
+                // Check if _tokenOne and _tokenTwo are found in the tokenList
+                if (!_tokenOne || !_tokenTwo) {
+                  console.error("Token not found in tokenList");
+                }
+
+                const _tokenOneAmount = formatUnits(
+                  userOp.swapParams.args[0].toString(),
+                  _tokenOne?.decimals || 18,
+                ).toString();
+                const _tokenTwoAmount = formatUnits(
+                  userOp.swapParams.args[1].toString(),
+                  _tokenTwo?.decimals || 18,
+                ).toString();
+
+                return (
+                  <>
+                    <div className="flex-grow items-centre border border-[#3a4157] rounded-lg p-4 shadow-md bg-[#212429] relative mb-2 ">
+                      <div className="absolute top-0 right-1 text-gray-300 hover:text-gray-500 cursor-pointer">
+                        <a target="_" href={`https://mumbai.polygonscan.com/tx/${userOp.transactionHash}`}>
+                          <LinkOutlined className=" text-gray-500 hover:text-gray-500 cursor-pointer" rev={undefined} />
+                        </a>
+                      </div>
+
+                      <div className="flex items-centre">
+                        <div className="flex grow items-center ">
+                          <img src={_tokenOne?.img} alt={`${_tokenOne?.ticker} Logo`} className="h-6 w-6 mr-2" />
+                          <div className="text-lg font-semibold">{`${_tokenOneAmount} ${_tokenOne?.ticker}`}</div>
+                        </div>
+                        <div className="text-gray-500 mx-2">
+                          <ArrowSmallDownIcon className=" -rotate-90 z-10 h-8 p-1 bg-[#212429] border-4 border-zinc-900 text-zinc-300 rounded-xl cursor-pointer hover:scale-110" />
+                        </div>
+
+                        <div className="flex grow items-center">
+                          <img src={_tokenTwo?.img} alt={`${_tokenTwo?.ticker} Logo`} className="h-6 w-6 mr-2" />
+                          <div className="text-lg font-semibold">{`${parseFloat(Number(_tokenTwoAmount).toFixed(5))} ${
+                            _tokenTwo?.ticker
+                          }`}</div>
+                        </div>
+                      </div>
+                      <div className="text-gray-400 text mt-2">
+                        You are swapping {_tokenOneAmount} {_tokenOne?.ticker} for atleast{" "}
+                        {parseFloat(Number(_tokenTwoAmount).toFixed(5))} {_tokenTwo?.ticker}
+                      </div>
+                    </div>
+                    {/* <div className="flex">
+                      <div>
+                        <div className={styles.lableStyle}>
+                          Swap -{" "}
+                          {}
+                        </div>
+                        <div className={styles.lableStyle}>
+                          Limit Order Price For Token 2 -{" "}
+                          {formatUnits(userOp.swapParams.args[1].toString(), _tokenTwo?.decimals || 18).toString()}
+                        </div>
+                      </div>
+
+                      <div className="flex">
+                        <div className={styles.lableStyle}>
+                          <img src={_tokenOne?.img} alt="assetOneLogo" className="h-5 ml-2" />
+                          {_tokenOne?.ticker}
+                        </div>
+                        {"  => "}
+                        <div className={styles.lableStyle}>
+                          <img src={_tokenTwo?.img} alt="assetOneLogo" className="h-5 ml-2" />
+                          {_tokenTwo?.ticker}
+                        </div>
+                        <div
+                          onClick={() => {
+                            deleteOrder(userOp);
+                          }}
+                        >
+                          <XMarkIcon className="w-6 h-6 text-gray-500" />
+                        </div>
+                      </div>
+                    </div> */}
+                  </>
+                );
+              })
+            ) : (
+              <div className={styles.lableStyle}>No user Operations</div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

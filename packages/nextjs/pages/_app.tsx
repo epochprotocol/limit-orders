@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { AppProps } from "next/app";
-import Head from "next/head";
 import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import NextNProgress from "nextjs-progressbar";
 import { Toaster } from "react-hot-toast";
+import { QueryClient, QueryClientProvider } from "react-query";
 import { useDarkMode } from "usehooks-ts";
 import { WagmiConfig } from "wagmi";
 import { Footer } from "~~/components/Footer";
@@ -18,10 +18,7 @@ import "~~/styles/globals.css";
 
 const ScaffoldEthApp = ({ Component, pageProps }: AppProps) => {
   const price = useNativeCurrencyPrice();
-  const setNativeCurrencyPrice = useGlobalState(state => state.setNativeCurrencyPrice);
-  // This variable is required for initial client side rendering of correct theme for RainbowKit
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
-  const { isDarkMode } = useDarkMode();
+  const setNativeCurrencyPrice = useGlobalState((state: any) => state.setNativeCurrencyPrice);
 
   useEffect(() => {
     if (price > 0) {
@@ -29,32 +26,44 @@ const ScaffoldEthApp = ({ Component, pageProps }: AppProps) => {
     }
   }, [setNativeCurrencyPrice, price]);
 
+  return (
+    <>
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="relative flex flex-col flex-1">
+          <Component {...pageProps} />
+        </main>
+        <Footer />
+      </div>
+      <Toaster />
+    </>
+  );
+};
+
+const ScaffoldEthAppWithProviders = (props: AppProps) => {
+  // This variable is required for initial client side rendering of correct theme for RainbowKit
+  const [isDarkTheme, setIsDarkTheme] = useState(true);
+  const { isDarkMode } = useDarkMode();
+  const queryClient = new QueryClient();
+
   useEffect(() => {
     setIsDarkTheme(isDarkMode);
   }, [isDarkMode]);
 
   return (
-    <WagmiConfig config={wagmiConfig}>
-      <NextNProgress />
-      <RainbowKitProvider
-        chains={appChains.chains}
-        avatar={BlockieAvatar}
-        theme={isDarkTheme ? darkTheme() : lightTheme()}
-      >
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="relative flex flex-col flex-1">
-            <Head>
-              <link rel="stylesheet" href="/styles/global.css" />
-            </Head>
-            <Component {...pageProps} />
-          </main>
-          <Footer />
-        </div>
-        <Toaster />
-      </RainbowKitProvider>
-    </WagmiConfig>
+    <QueryClientProvider client={queryClient}>
+      <WagmiConfig config={wagmiConfig}>
+        <NextNProgress />
+        <RainbowKitProvider
+          chains={appChains.chains}
+          avatar={BlockieAvatar}
+          theme={isDarkTheme ? darkTheme() : lightTheme()}
+        >
+          <ScaffoldEthApp {...props} />
+        </RainbowKitProvider>
+      </WagmiConfig>
+    </QueryClientProvider>
   );
 };
 
-export default ScaffoldEthApp;
+export default ScaffoldEthAppWithProviders;
