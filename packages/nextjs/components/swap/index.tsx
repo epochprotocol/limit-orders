@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import uniswapList from "../../components/assets/uniswapList.json";
 import jsonData from "../../public/dexesAddresses.json";
 import { Address } from "../scaffold-eth";
@@ -7,6 +7,7 @@ import { CloseCircleOutlined, DownOutlined, LinkOutlined, ReloadOutlined, Settin
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
 import { Divider, Modal, Popover, Radio, Select, notification } from "antd";
+import { NotificationPlacement } from "antd/es/notification/interface";
 import { BigNumber } from "ethers";
 import { LoaderIcon } from "react-hot-toast";
 import QRCode from "react-qr-code";
@@ -85,6 +86,7 @@ function Swap() {
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
   const [factoryAdd, setFactoryAdd] = useState<string | null>(null);
   const [orderType, setOrderType] = useState<OrderTypes>(OrderTypes.LimitOrder!);
+  const Context = createContext({ name: "Default" });
 
   // Other Hooks
   const publicClient = usePublicClient();
@@ -106,7 +108,11 @@ function Swap() {
     abi: UniswapV2FactoryABI,
     walletClient,
   });
-  const { userOperations, loading: userOperationsLoading } = useFetchUserOperations(userSCWalletAddress);
+  const {
+    userOperations,
+    loading: userOperationsLoading,
+    fetchOpenOrders,
+  } = useFetchUserOperations(userSCWalletAddress);
   const {
     data: executedUserOperations,
     refetch,
@@ -157,10 +163,10 @@ function Swap() {
     const interval = setInterval(async () => {
       if (userSCWalletAddress && userSCWalletAddress !== "") {
         try {
-          console.log("userSCWalletAddress: ", userSCWalletAddress);
           const balance = await publicClient.getBalance({ address: userSCWalletAddress });
-          console.log("userSCWalletBalance: ", userSCWalletBalance);
           setUserSCWalletBalance(balance);
+          fetchOpenOrders();
+          refetch();
         } catch (error) {
           console.log("error: ", error);
         }
@@ -207,10 +213,6 @@ function Swap() {
   useEffect(() => {
     setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
   }, [tokenOneLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
-
-  useEffect(() => {
-    refetch();
-  }, [routerAdd, userSCWalletAddress]);
 
   useEffect(() => {
     if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
@@ -446,10 +448,8 @@ function Swap() {
         };
 
         const key = await bundler.getValidNonceKey(newUserOp);
-        console.log("key: ", key);
 
         const nonce = await walletAPI.getNonce(key);
-        console.log("nonce: ", nonce);
 
         newUserOp.nonce = nonce;
 
@@ -464,7 +464,6 @@ function Swap() {
         // });
 
         const signedUserOp = await walletAPI.signUserOp(newUserOp);
-        console.log("signedUserOp: ", signedUserOp);
 
         let advancedOp: AdvancedUserOperationStruct;
 
@@ -505,8 +504,6 @@ function Swap() {
           console.log("advancedOp: ", advancedOp);
         }
 
-        // console.log("bundlerUrl: ", bundlerUrl);
-
         const userOpHash = await bundler.sendUserOpToBundler(advancedOp);
         const txid = await walletAPI.getUserOpReceipt(userOpHash);
         console.log("reqId", userOpHash, "txid=", txid);
@@ -518,7 +515,29 @@ function Swap() {
     setIsConfirmationOpen(false);
   }
   async function deleteOrder(userOp: any) {
-    console.log("userOp: ", userOp.userOp.nonce);
+    if (signer && provider && bundler && walletAPI) {
+      try {
+        const op = await walletAPI.createSignedUserOp({
+          target: userSCWalletAddress,
+          data: "0x",
+          value: 0n,
+          nonce: BigInt(userOp.userOp.nonce).toString(),
+        });
+
+        const deployWalletUserOp = await bundler.deleteAdvancedUserOpFromBundler(op);
+        console.log("deployWalletUserOp: ", deployWalletUserOp);
+        openDeleteNotification("topRight");
+      } catch (error) {
+        console.log("error: ", error);
+      }
+    }
+  }
+  async function openDeleteNotification(placement: NotificationPlacement) {
+    notificationApi.info({
+      message: `Order Submitted for Deletion`,
+      description: <Context.Consumer>{() => `Your order should be deleted in some time`}</Context.Consumer>,
+      placement,
+    });
   }
   function getSwapBtnClassName() {
     let className = "p-4 wa w-full my-2 content-around rounded-xl";

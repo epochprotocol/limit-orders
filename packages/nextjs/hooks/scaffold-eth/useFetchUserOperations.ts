@@ -28,71 +28,72 @@ export const useFetchUserOperations = (userAddress: string) => {
     walletClient,
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (userAddress) {
-          const resp = await axios.post(bundlerUrl, {
-            method: "eth_getUserOperations",
-            params: [userAddress],
-            id: 1,
-            jsonrpc: "2.0",
-          });
+  const fetchOpenOrders = async () => {
+    try {
+      if (userAddress) {
+        const resp = await axios.post(bundlerUrl, {
+          method: "eth_getUserOperations",
+          params: [userAddress],
+          id: 1,
+          jsonrpc: "2.0",
+        });
 
-          console.log("resp.status: ", resp.status);
-          if (resp.status === 200) {
-            const data = resp.data.result;
-            console.log("data: ", data);
+        console.log("resp.status: ", resp.status);
+        if (resp.status === 200) {
+          const data = resp.data.result;
+          console.log("data: ", data);
 
-            const newUserOperationsList: any[] = [];
+          const newUserOperationsList: any[] = [];
 
-            data.forEach((userOp: any) => {
-              try {
-                console.log("userOp: ", userOp);
-                console.log("userOp.userOp.callData: ", userOp.userOp.callData);
-                console.log("simpleAccount?.abi as unknown as any: ", simpleAccount?.abi as unknown as any);
-                const executeData = decodeFunctionData({
-                  abi: simpleAccount?.abi as unknown as any,
-                  data: userOp.userOp.callData,
+          data.forEach((userOp: any) => {
+            try {
+              console.log("userOp: ", userOp);
+              console.log("userOp.userOp.callData: ", userOp.userOp.callData);
+              console.log("simpleAccount?.abi as unknown as any: ", simpleAccount?.abi as unknown as any);
+              const executeData = decodeFunctionData({
+                abi: simpleAccount?.abi as unknown as any,
+                data: userOp.userOp.callData,
+              });
+
+              if (executeData && executeData.args.length > 1) {
+                const uniswapSwapData = executeData.args[2];
+                console.log("uniswapSwapData: ", uniswapSwapData);
+
+                const uniswapSwapDecodedData = decodeFunctionData({
+                  abi: uniswapRouter02?.abi as unknown as any,
+                  data: uniswapSwapData,
                 });
 
-                if (executeData && executeData.args.length > 1) {
-                  const uniswapSwapData = executeData.args[2];
-                  console.log("uniswapSwapData: ", uniswapSwapData);
+                console.log("uniswapSwapDecodedData: ", uniswapSwapDecodedData);
 
-                  const uniswapSwapDecodedData = decodeFunctionData({
-                    abi: uniswapRouter02?.abi as unknown as any,
-                    data: uniswapSwapData,
-                  });
+                const newUserOperation = {
+                  ...userOp,
+                  swapParams: uniswapSwapDecodedData,
+                };
 
-                  console.log("uniswapSwapDecodedData: ", uniswapSwapDecodedData);
-
-                  const newUserOperation = {
-                    ...userOp,
-                    swapParams: uniswapSwapDecodedData,
-                  };
-
-                  newUserOperationsList.push(newUserOperation);
-                }
-              } catch (error) {
-                console.log("Not limit order userop ignoree: ", error);
+                newUserOperationsList.push(newUserOperation);
               }
-            });
+            } catch (error) {
+              console.log("Not limit order userop ignoree: ", error);
+            }
+          });
 
-            setUserOperations(newUserOperationsList);
-          }
+          setUserOperations(newUserOperationsList);
         }
-      } catch (error) {
-        console.error(error);
       }
-      setLoading(false);
-    };
+    } catch (error) {
+      console.error(error);
+    }
+    setLoading(false);
+  };
 
-    fetchData();
+  useEffect(() => {
+    fetchOpenOrders();
   }, [userAddress, bundlerUrl, simpleAccount?.abi, uniswapRouter02?.abi]);
 
   return {
     userOperations,
     loading,
+    fetchOpenOrders,
   };
 };

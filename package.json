@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@account-abstraction/utils": "^0.6.0",
-    "@epoch-protocol/sdk": "0.8.7",
+    "@epoch-protocol/sdk": "0.8.10",
     "axios": "^1.6.2",
     "graphql": "^16.8.1",
     "viem": "^1.20.3",
