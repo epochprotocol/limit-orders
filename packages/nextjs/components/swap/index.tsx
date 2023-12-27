@@ -320,9 +320,9 @@ function Swap() {
             value: 0n,
           });
 
-          setIsDeploying(false);
           const deployWalletUserOp = await bundler.sendUserOpToBundler(op);
           console.log("deployWalletUserOp: ", deployWalletUserOp);
+          setIsDeploying(false);
 
           if (deployWalletUserOp) {
             setWalletSetupStep2(false);
