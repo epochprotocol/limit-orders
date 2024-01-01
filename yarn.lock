@@ -449,9 +449,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@epoch-protocol/sdk@npm:0.8.10":
-  version: 0.8.10
-  resolution: "@epoch-protocol/sdk@npm:0.8.10"
+"@epoch-protocol/sdk@npm:0.9.8":
+  version: 0.9.8
+  resolution: "@epoch-protocol/sdk@npm:0.9.8"
   dependencies:
     "@account-abstraction/contracts": ^0.6.0
     "@epoch-protocol/utils": ^0.6.2
@@ -463,7 +463,7 @@ __metadata:
     "@types/debug": ^4.1.7
     debug: ^4.3.4
     ethers: ^5.7.0
-  checksum: becad565875c5c82bb52a509fa96b78d20920ed5daffbf35737e6e469e0d572704651f39bb256bec818c8ccbe540532604d759a1f74afef5b3905cd3eb07d30b
+  checksum: 2367a9362a70ab654971e0bdf8deeca2c9b2ba7c7f3bff652987519277b5d2856d7edc59b070965391141762cb97035600ad1d5668541653f624a4d518061c16
   languageName: node
   linkType: hard
 
@@ -7651,7 +7651,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethereumjs-util@npm:^7.1.0, ethereumjs-util@npm:^7.1.4":
+"ethereumjs-util@npm:^7.1.0, ethereumjs-util@npm:^7.1.4, ethereumjs-util@npm:^7.1.5":
   version: 7.1.5
   resolution: "ethereumjs-util@npm:7.1.5"
   dependencies:
@@ -13706,9 +13706,10 @@ __metadata:
   resolution: "se-2@workspace:."
   dependencies:
     "@account-abstraction/utils": ^0.6.0
-    "@epoch-protocol/sdk": 0.8.10
+    "@epoch-protocol/sdk": 0.9.8
     axios: ^1.6.2
     daisyui: ^4.4.19
+    ethereumjs-util: ^7.1.5
     ethers: ^5.7.0
     graphql: ^16.8.1
     husky: ^8.0.1
