@@ -86,7 +86,7 @@ export const useFetchExecutedUserOperations = (address: string, target: string) 
     },
     {
       refetchOnWindowFocus: true, // Refetch data when the window regains focus
-      refetchInterval: 5000, // Refetch data every 5000 milliseconds (adjust as needed)
+      refetchInterval: 10000, // Refetch data every 10000 milliseconds (adjust as needed)
     },
   );
 };

@@ -2,6 +2,7 @@ import { createContext, useEffect, useState } from "react";
 import uniswapList from "../../components/assets/uniswapList.json";
 import jsonData from "../../public/dexesAddresses.json";
 import { Address } from "../scaffold-eth";
+import { GatingPopup } from "./GatingPopup";
 // import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, LinkOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { HttpRpcClient, SimpleAccountAPI } from "@epoch-protocol/sdk";
@@ -575,6 +576,7 @@ function Swap() {
   return (
     <>
       {contextHolder}
+      <GatingPopup></GatingPopup>
       <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a pair">
         <div className={styles.modalContent}>
           {tokenList?.map((e, i) => {
