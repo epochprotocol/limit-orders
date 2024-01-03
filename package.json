@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@account-abstraction/utils": "^0.6.0",
-    "@epoch-protocol/sdk": "0.9.8",
+    "@epoch-protocol/sdk": "0.9.11",
     "axios": "^1.6.2",
     "ethereumjs-util": "^7.1.5",
     "graphql": "^16.8.1",

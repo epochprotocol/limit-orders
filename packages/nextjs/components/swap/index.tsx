@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 import uniswapList from "../../components/assets/uniswapList.json";
 import jsonData from "../../public/dexesAddresses.json";
 import { WalletOnboarding } from "../common/WalletOnboarding";
@@ -60,9 +60,7 @@ function Swap() {
   const [tokenTwo, setTokenTwo] = useState(tokenList[0]["tokenTwo"]);
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-
   const [swapping, setSwapping] = useState(false);
-
   const [prices, setPrices] = useState<number>(0);
   const [txDetails, setTxDetails] = useState({
     to: null,
@@ -70,7 +68,6 @@ function Swap() {
     value: null,
   });
   const [needToIncreaseAllowance, setNeedToIncreaseAllowance] = useState<boolean>(false);
-
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<string | null>(null);
   const [routerAdd, setRouterAdd] = useState<string | null>(null);
@@ -111,40 +108,86 @@ function Swap() {
     isLoading: executedUserOperationsLoading,
   } = useFetchExecutedUserOperations(userSCWalletAddress, routerAdd!);
 
+  const fetchPrices = useCallback(
+    async (one: string, two: string) => {
+      try {
+        // console.log(parseEther(tokenOneAmount.toString()));
+        console.log("publicClient: ", publicClient);
+        console.log("IFcondition", routerAdd);
+        const args = [BigInt(parseUnits("1", tokenOne.decimals).toString()), [one, two]];
+        if (uniswapRouter && routerAdd) {
+          console.log("sending fecth");
+
+          // const data: any = useArbitaryContractRead({
+          //   functionName: "getAmountsOut",
+          //   contractAddress: routerAdd,
+          //   abi: uniswapRouter02!.abi,
+          //   args,
+          // });
+          const data: any = await uniswapRouter.read.getAmountsOut(args);
+
+          if (data) {
+            console.log("data: ", data);
+
+            const price = Number(formatUnits(data[1] as bigint, tokenTwo.decimals));
+            // console.log("price: ", price);
+            console.log("price have arrived", price);
+            setPrices(price);
+            setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
+            if (tokenOneLimitPrice.length === 0) {
+              setTokenOneLimitPrice(price.toString());
+              setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
+            }
+            return price;
+          }
+        }
+        return 0;
+      } catch (error) {
+        return 0;
+      }
+    },
+    [publicClient, routerAdd, tokenOne.decimals, tokenOneAmount, tokenOneLimitPrice, tokenTwo.decimals, uniswapRouter],
+  );
+
   // useEffect Below
   useEffect(() => {
     const fetchData = async () => {
       const chainID = targetNetwork.id.toString();
       try {
-        // const response = await fetch("/dexesAddresses.json");
-        // const jsonData: ChainData = await response.json();
-        setChainData(jsonData as ChainData);
-        // setChainID(Object.keys(jsonData[0])[0]);
-        // Set the default selected exchange when data is loaded
-        const selection = Object.keys((jsonData as ChainData)[chainID])[0];
-        setSelectedExchange(selection);
-        setRouterAdd((jsonData as ChainData)[chainID][selection].UNISWAP_ROUTER02);
-        setFactoryAdd((jsonData as ChainData)[chainID][selection].UNISWAP_FACTORY);
-        console.log("calling fectch");
-        setTokenList((uniswapList as any)[chainID][selection] ?? []);
-        // setTokenList(uniswapList[chainID][selection]);
+        if (jsonData && chainID) {
+          // const response = await fetch("/dexesAddresses.json");
+          // const jsonData: ChainData = await response.json();
+          setChainData(jsonData as ChainData);
+          // setChainID(Object.keys(jsonData[0])[0]);
+          // Set the default selected exchange when data is loaded
+          const selection = Object.keys((jsonData as ChainData)[chainID])[0];
+          setSelectedExchange(selection);
+          setRouterAdd((jsonData as ChainData)[chainID][selection].UNISWAP_ROUTER02);
+          setFactoryAdd((jsonData as ChainData)[chainID][selection].UNISWAP_FACTORY);
+          console.log("calling fectch");
+          setTokenList((uniswapList as any)[chainID][selection] ?? []);
+          // setTokenList(uniswapList[chainID][selection]);
+        }
       } catch (error) {
         console.error("Error loading JSON data:", error);
       }
     };
 
     fetchData();
-  }, [targetNetwork.id]);
+  }, [targetNetwork.id, targetNetwork]);
 
   useEffect(() => {
-    if (chainData && selectedExchange) {
-      console.log("chanigng router");
-      const chainID = targetNetwork.id;
+    const chainID = targetNetwork.id;
+    if (chainData && selectedExchange && chainID) {
+      console.log("qweqweqwechainID: ", chainID);
+      console.log("qweqweqweselectedExchange: ", selectedExchange);
+      console.log("qweqweqwechainData: ", chainData);
+      console.log("qweqweqwechanigng router");
       setRouterAdd(chainData[chainID][selectedExchange].UNISWAP_ROUTER02);
       setFactoryAdd(chainData[chainID][selectedExchange].UNISWAP_FACTORY);
       setTokenList((uniswapList as any)[chainID][selectedExchange] ?? []);
     }
-  }, [selectedExchange]);
+  }, [selectedExchange, chainData, targetNetwork]);
 
   useEffect(() => {
     setTokenOne(tokenList[0]["tokenOne"]);
@@ -153,15 +196,15 @@ function Swap() {
 
   useEffect(() => {
     fetchPrices(tokenOne.address, tokenTwo.address);
-  }, [tokenOne, tokenTwo]);
+  }, [tokenOne, tokenTwo, fetchPrices]);
+
+  useEffect(() => {
+    if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
+  }, [tokenOne, tokenTwo, tokenOneAmount, fetchPrices]);
 
   useEffect(() => {
     setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
   }, [tokenOneLimitPrice, tokenOneAmount, tokenOne, tokenTwo]);
-
-  useEffect(() => {
-    if (tokenOneAmount) fetchPrices(tokenOne.address, tokenTwo.address);
-  }, [tokenOne, tokenTwo, tokenOneAmount]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -172,12 +215,13 @@ function Swap() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [userSCWalletAddress]);
+  }, [userSCWalletAddress, fetchOpenOrders, refetch]);
 
   // Helper Functions here
   function handleSlippageChange(e: any) {
     setSlippage(e.target.value);
   }
+
   async function reload() {
     setTokenOneAmount("0");
     setTokenTwoAmount("0");
@@ -198,6 +242,7 @@ function Swap() {
     });
     setNeedToIncreaseAllowance(false);
   }
+
   async function switchTokens() {
     setPrices(0);
     setTokenOneAmount("0");
@@ -207,14 +252,16 @@ function Swap() {
     setTokenOne(two);
     setTokenTwo(one);
 
-    await fetchPrices(two.address, one.address).then(price => {
-      setTokenOneLimitPrice(price.toString());
-      setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
-    });
+    const price = await fetchPrices(two.address, one.address);
+
+    setTokenOneLimitPrice(price.toString());
+    setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
   }
+
   function openModal() {
     setIsTokenPickerOpen(true);
   }
+
   function modifyToken(i: number) {
     setPrices(0);
     setTokenOneAmount("0");
@@ -225,39 +272,6 @@ function Swap() {
     setTokenTwo(tokenList[i]["tokenTwo"]);
     // }
     setIsTokenPickerOpen(false);
-  }
-  async function fetchPrices(one: string, two: string): Promise<number> {
-    // console.log(parseEther(tokenOneAmount.toString()));
-    console.log("publicClient: ", publicClient);
-    console.log("IFcondition", routerAdd);
-    const args = [BigInt(parseUnits("1", tokenOne.decimals).toString()), [one, two]];
-    if (uniswapRouter && routerAdd) {
-      console.log("sending fecth");
-
-      // const data: any = useArbitaryContractRead({
-      //   functionName: "getAmountsOut",
-      //   contractAddress: routerAdd,
-      //   abi: uniswapRouter02!.abi,
-      //   args,
-      // });
-      const data: any = await uniswapRouter.read.getAmountsOut(args);
-
-      if (data) {
-        console.log("data: ", data);
-
-        const price = Number(formatUnits(data[1] as bigint, tokenTwo.decimals));
-        // console.log("price: ", price);
-        console.log("price have arrived", price);
-        setPrices(price);
-        setTokenTwoAmount((Number(tokenOneAmount) * price).toString());
-        if (tokenOneLimitPrice.length === 0) {
-          setTokenOneLimitPrice(price.toString());
-          setTokenTwoLimitAmount((Number(tokenOneLimitPrice) * Number(tokenOneAmount)).toString());
-        }
-        return price;
-      }
-    }
-    return 0;
   }
 
   async function executeSwap() {
@@ -493,7 +507,7 @@ function Swap() {
   return (
     <>
       {contextHolder}
-      <GatingPopup></GatingPopup>
+      <GatingPopup />
       <Modal open={isTokenPickerOpen} footer={null} onCancel={() => setIsTokenPickerOpen(false)} title="Select a pair">
         <div className={styles.modalContent}>
           {tokenList?.map((e, i) => {

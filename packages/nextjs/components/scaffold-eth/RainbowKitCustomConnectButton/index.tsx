@@ -6,6 +6,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Address } from "viem";
 import { useAutoConnect, useNetworkColor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { useUserSCWallet } from "~~/hooks/useUserSCWallet";
 import { getBlockExplorerAddressLink } from "~~/utils/scaffold-eth";
 
 /**
@@ -15,6 +16,7 @@ export const RainbowKitCustomConnectButton = () => {
   useAutoConnect();
   const networkColor = useNetworkColor();
   const { targetNetwork } = useTargetNetwork();
+  const userSCWalletAddress = useUserSCWallet();
 
   return (
     <ConnectButton.Custom>
@@ -22,6 +24,9 @@ export const RainbowKitCustomConnectButton = () => {
         const connected = mounted && account && chain;
         const blockExplorerAddressLink = account
           ? getBlockExplorerAddressLink(targetNetwork, account.address)
+          : undefined;
+        const blockExplorerSCAddressLink = userSCWalletAddress
+          ? getBlockExplorerAddressLink(targetNetwork, userSCWalletAddress)
           : undefined;
 
         return (
@@ -52,8 +57,27 @@ export const RainbowKitCustomConnectButton = () => {
                     displayName={account.displayName}
                     ensAvatar={account.ensAvatar}
                     blockExplorerAddressLink={blockExplorerAddressLink}
+                    qrCodeModalClass={"qrcode-modal"}
                   />
                   <AddressQRCodeModal address={account.address as Address} modalId="qrcode-modal" />
+                  {userSCWalletAddress ? (
+                    <>
+                      <div className="flex flex-col items-center mr-1">
+                        <Balance address={userSCWalletAddress as Address} className="min-h-0 h-auto" />
+                        <span className="text-xs" style={{ color: networkColor }}>
+                          {chain.name}
+                        </span>
+                      </div>
+                      <AddressInfoDropdown
+                        address={userSCWalletAddress as Address}
+                        displayName={"Smart Wallet"}
+                        ensAvatar={""}
+                        blockExplorerAddressLink={blockExplorerSCAddressLink}
+                        qrCodeModalClass="qrcode-modal-wallet"
+                      />
+                      <AddressQRCodeModal address={userSCWalletAddress as Address} modalId="qrcode-modal-wallet" />
+                    </>
+                  ) : null}
                 </>
               );
             })()}

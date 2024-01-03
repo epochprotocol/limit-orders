@@ -3,7 +3,7 @@ import { Address } from "../scaffold-eth/Address";
 import { Divider, Modal } from "antd";
 import { LoaderIcon } from "react-hot-toast";
 import QRCode from "react-qr-code";
-import { usePublicClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { useBundler } from "~~/hooks/useBundler";
 import { useIsWalletDeployed } from "~~/hooks/useIsWalletDeployed";
 import { useUserSCWallet } from "~~/hooks/useUserSCWallet";
@@ -14,14 +14,20 @@ export const WalletOnboarding = () => {
   const [walletSetupStep3, setWalletSetupStep3] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [userSCWalletBalance, setUserSCWalletBalance] = useState<bigint>(0n);
-  const isUserWalletNotDeployed = useIsWalletDeployed();
+  const [isUserSCWalletNotDeployed, setIsUserSCWalletNotDeployed] = useState<boolean>(false);
 
   const publicClient = usePublicClient();
   const { walletAPI, bundler } = useBundler();
   const userSCWalletAddress = useUserSCWallet();
+  const isUserWalletNotDeployed = useIsWalletDeployed();
+  const account = useAccount();
+
+  useEffect(() => {
+    setIsUserSCWalletNotDeployed(isUserWalletNotDeployed);
+  }, [isUserWalletNotDeployed]);
 
   async function walletSetupNextStep() {
-    if (walletAPI && bundler) {
+    if (walletAPI && bundler && account.address) {
       try {
         if (walletSetupStep1) {
           if (!(userSCWalletBalance === 0n)) {
@@ -31,7 +37,7 @@ export const WalletOnboarding = () => {
         } else if (walletSetupStep2) {
           setIsDeploying(true);
           const op = await walletAPI.createSignedUserOp({
-            target: userSCWalletAddress,
+            target: account.address,
             data: "0x",
             value: 0n,
           });
@@ -72,14 +78,14 @@ export const WalletOnboarding = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [userSCWalletAddress]);
+  }, [userSCWalletAddress, publicClient]);
 
   return (
     <Modal
-      open={isUserWalletNotDeployed}
+      open={isUserSCWalletNotDeployed}
       footer={null}
       onCancel={() => {
-        // setIsUserWalletNotDeployed(false);
+        setIsUserSCWalletNotDeployed(false);
       }}
       title="Manage Your Wallet"
     >
