@@ -1,8 +1,8 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import uniswapList from "../../components/assets/uniswapList.json";
 import jsonData from "../../public/dexesAddresses.json";
+import { GatingPopup } from "../common/GatingPopup";
 import { WalletOnboarding } from "../common/WalletOnboarding";
-import { GatingPopup } from "./GatingPopup";
 // import tokenList from "../../components/assets/tokenList.json";
 import { CloseCircleOutlined, DownOutlined, LinkOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { AdvancedUserOperationStruct } from "@epoch-protocol/sdk/dist/src/AdvancedUserOp";
