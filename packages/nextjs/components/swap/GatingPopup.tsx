@@ -22,7 +22,6 @@ const containsAddress = (data: AddressData, targetAddress: string): boolean => {
 
 export const GatingPopup = () => {
   const { address } = useAccount();
-  const [whitelist, setWhitelist] = useState<AddressData>();
   const [showModal, setShowModal] = useState<boolean>(false);
 
   useEffect(() => {
@@ -32,35 +31,23 @@ export const GatingPopup = () => {
         const response = await fetch("https://raw.githubusercontent.com/epochprotocol/whitelist/main/whitelist.json");
         const result = await response.json();
 
-        // Update state with the raw data
-        setWhitelist(result);
+        if (result && address) {
+          console.log("checking if it contains address or not", address, result);
+          setShowModal(!containsAddress(result, address));
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
 
-    // Only fetch data if it hasn't been loaded yet
-    if (!whitelist) {
-      fetchData();
-    }
-  }, [whitelist]);
-  useEffect(() => {
-    if (address === undefined) {
-      console.log("address is undefined??", address);
-      setShowModal(false);
-    } else {
-      if (whitelist) {
-        console.log("checking if it contains address or not", address, whitelist);
-        setShowModal(!containsAddress(whitelist, address));
-      }
-    }
-  }, [address, whitelist]);
+    fetchData();
+  }, [address]);
 
   return (
     <Modal
       open={showModal}
       footer={null}
-      title="This wallet is not whitelisted"
+      title="This Wallet is Not Whitelisted"
       closable={false}
       className="w-full max-w-lg"
       zIndex={1001}
